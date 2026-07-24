@@ -152,7 +152,7 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
           )}
           <div className="flex flex-col gap-2">
             <Button variant="outline" asChild>
-              <Link to="/account" onClick={() => onOpenChange(false)}>
+              <Link to="/account/keys" onClick={() => onOpenChange(false)}>
                 Брокерские ключи
               </Link>
             </Button>

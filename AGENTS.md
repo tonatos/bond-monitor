@@ -42,7 +42,7 @@ smart-lab ──► infrastructure/ratings/ ──► SQLite bond_credit_ratings
 | Broker keys | `broker_credentials` envelope AES-GCM + `BROKER_KEK`; API `PUT/DELETE /me/broker-credentials/{kind}` |
 | Enrich | `TINKOFF_TOKEN` остаётся process env |
 | Trading | `TokenFor(owner, kind)`; env `T_TRADING_TOKEN_*` только как fallback при `AUTH_DISABLED` |
-| UI | `/account` — ключи + тариф/финансы + подключение Telegram-бота; кнопка всегда «Перевести в торговлю»: без подписки → paywall, без ключей → `/account`, иначе wizard |
+| UI | `/account` — тариф/финансы + `/account/keys` ключи + подключение Telegram-бота; кнопка всегда «Перевести в торговлю»: без подписки → paywall, без ключей → `/account/keys`, иначе wizard |
 | Notifier | scan с токеном владельца; Telegram на `owner_telegram_id` после `/start` в боте; `RenewDue` биллинга |
 | Isolation | чужой `portfolio_id` → 404; тесты `isolation_test.go`, e2e tenant |
 | Billing | `domain/billing` + ЮKassa; платные фичи v1: ключи write + attach + доступ к trading-портфелю; `COMPLIMENTARY_TELEGRAM_IDS` |
@@ -56,9 +56,9 @@ smart-lab ──► infrastructure/ratings/ ──► SQLite bond_credit_ratings
 | Бесплатно | Скринер, симуляция, radar, избранное, calculator после Telegram-логина |
 | Платно (entitlements) | `broker_credentials.write`, `portfolio.attach`, `trading_portfolio.access` |
 | Тариф | Pro: 795 ₽/мес или 5940 ₽/год; версии в `billing_plan_versions` (grandfathering цены) |
-| Эквайринг | ЮKassa рекуррент (`save_payment_method`); без `YOOKASSA_*` — UI/каталог работают, checkout → `payment_unavailable` |
+| Эквайринг | ЮKassa: по умолчанию prepaid one-time; рекуррент (`save_payment_method` + `RenewDue`) при `YOOKASSA_RECURRING=true`; без `YOOKASSA_*` — UI/каталог работают, checkout → `payment_unavailable` |
 | Complimentary | `COMPLIMENTARY_TELEGRAM_IDS` (пусто = никто) — полный доступ без платежей; задаётся только в `.env` / `deploy/inventory.yaml` |
-| UI | `/account` ключи, `/account/notifications` Telegram-бот, `/account/plan` тариф (+ ROI), `/account/finance` ledger; paywall-диалог на платных действиях |
+| UI | `/account` тариф (+ ROI), `/account/keys` ключи, `/account/notifications` Telegram-бот, `/account/finance` ledger; paywall-диалог на платных действиях |
 | Истечение | Ключи не трогаем; trading-портфели `access_locked` / 402 `subscription_required` |
 
 Domain: `backend/internal/domain/billing/`. Application: `application/billing`. Infra: `infrastructure/yookassa`, `persistence/billing_repository.go`.

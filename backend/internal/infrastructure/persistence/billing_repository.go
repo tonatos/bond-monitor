@@ -464,6 +464,30 @@ func (r *BillingRepository) GetPaymentByIdempotencyKey(ctx context.Context, key 
 	return &p, nil
 }
 
+// ListPendingPaymentsByOwner returns pending payments that may still be confirmed at the provider.
+func (r *BillingRepository) ListPendingPaymentsByOwner(ctx context.Context, ownerTelegramID int64) ([]billing.Payment, error) {
+	var rows []paymentRow
+	err := r.db.SelectContext(ctx, &rows, `
+		SELECT id, owner_telegram_id, plan_version_id, period, amount_kopecks, status,
+			idempotency_key, yookassa_payment_id, confirmation_url, purpose, created_at, updated_at
+		FROM billing_payments
+		WHERE owner_telegram_id = $1 AND status = $2
+		ORDER BY created_at DESC
+	`, ownerTelegramID, string(billing.PaymentPending))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]billing.Payment, 0, len(rows))
+	for _, row := range rows {
+		p, err := paymentFromRow(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
 // AddLedgerEntry appends a ledger row.
 func (r *BillingRepository) AddLedgerEntry(ctx context.Context, e billing.LedgerEntry) (billing.LedgerEntry, error) {
 	if e.ID == "" {

@@ -34,6 +34,7 @@ type envTemplateData struct {
 	TelegramSupportChatID    string
 	YooKassaShopID           string
 	YooKassaSecretKey        string
+	YooKassaRecurring        string
 	ComplimentaryTelegramIDs string
 	PostgresPassword         string
 }
@@ -68,6 +69,7 @@ func renderEnv(inv Inventory) (string, error) {
 		TelegramSupportChatID:    strconv.FormatInt(inv.TelegramSupportChatID, 10),
 		YooKassaShopID:           inv.YooKassaShopID,
 		YooKassaSecretKey:        inv.YooKassaSecretKey,
+		YooKassaRecurring:        strconv.FormatBool(inv.YooKassaRecurring),
 		ComplimentaryTelegramIDs: inv.ComplimentaryTelegramIDs,
 		PostgresPassword:         inv.PostgresPassword,
 	}

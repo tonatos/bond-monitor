@@ -163,6 +163,7 @@ func Wire(ctx context.Context, settings config.Settings, logger *slog.Logger) (*
 		yooGateway,
 		settings.ComplimentaryTelegramIDs,
 		settings.YooKassaReturnURLResolved(),
+		settings.YooKassaRecurring,
 	)
 
 	botUsername := settings.TelegramBotUsername
@@ -276,6 +277,7 @@ func WireNotifier(ctx context.Context, settings config.Settings, logger *slog.Lo
 		yookassa.NewClient(settings.YooKassaShopID, settings.YooKassaSecretKey, &http.Client{Timeout: 20 * time.Second}),
 		settings.ComplimentaryTelegramIDs,
 		settings.YooKassaReturnURLResolved(),
+		settings.YooKassaRecurring,
 	)
 	telegram := notifications.NewTelegramClient(settings.TelegramBotToken, settings.TelegramHTTPProxy)
 	gate := &appnotifications.SubscriptionTelegramGate{Users: usersRepo, Billing: billingSvc}

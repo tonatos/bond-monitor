@@ -1,20 +1,39 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/client";
+import { ProStatusBadge } from "@/features/billing/ProStatusBadge";
+import { hasProAccess } from "@/features/billing/proStatus";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { to: "/account", end: true, label: "Ключи" },
+  { to: "/account", end: true, label: "Тариф" },
+  { to: "/account/keys", end: false, label: "Ключи" },
   { to: "/account/notifications", end: false, label: "Уведомления" },
-  { to: "/account/plan", end: false, label: "Тариф" },
   { to: "/account/finance", end: false, label: "Финансы" },
 ] as const;
 
 export function AccountLayout() {
+  const { data: billingStatus } = useQuery({
+    queryKey: ["billing-status"],
+    queryFn: () => api.getBillingStatus(),
+  });
+  const showPro = hasProAccess(billingStatus);
+  const proEndAt = billingStatus?.subscription?.current_period_end ?? null;
+
   return (
     <div className="mx-auto max-w-xl space-y-6 p-4 pb-24 md:pb-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Личный кабинет</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Личный кабинет</h1>
+          {showPro && (
+            <ProStatusBadge
+              endAt={proEndAt}
+              complimentary={Boolean(billingStatus?.complimentary)}
+            />
+          )}
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ключи брокера, Telegram-уведомления, подписка и история списаний
+          Подписка, ключи брокера, Telegram-уведомления и история списаний
         </p>
       </div>
 

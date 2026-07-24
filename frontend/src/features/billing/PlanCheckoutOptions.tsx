@@ -4,6 +4,7 @@ import { api, ApiError } from "@/api/client";
 import type { BillingPeriod } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { hasProAccess } from "@/features/billing/proStatus";
 import { formatRub } from "@/lib/utils";
 
 function kopecksToRub(k: number) {
@@ -13,9 +14,11 @@ function kopecksToRub(k: number) {
 type Props = {
   /** When true, hide complimentary / already-subscribed CTAs noise — compact for dialog. */
   compact?: boolean;
+  /** Active subscriber renewing: «Продлить» instead of «Оплатить». */
+  renewMode?: boolean;
 };
 
-export function PlanCheckoutOptions({ compact = false }: Props) {
+export function PlanCheckoutOptions({ compact = false, renewMode = false }: Props) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +58,21 @@ export function PlanCheckoutOptions({ compact = false }: Props) {
   const month = catalog?.plans.find((p) => p.period === "month");
   const year = catalog?.plans.find((p) => p.period === "year");
   const paymentEnabled = Boolean(catalog?.payment_enabled ?? status?.payment_enabled);
-  const blocked = !paymentEnabled || checkoutMutation.isPending || status?.complimentary;
+  const complimentary = Boolean(status?.complimentary);
+  const activeAccess = hasProAccess(status) && !complimentary;
+  const isRenew = renewMode || activeAccess;
+  const blocked = !paymentEnabled || checkoutMutation.isPending || complimentary;
+
+  if (complimentary && !compact) {
+    return (
+      <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+        У вас complimentary‑доступ ко всем платным функциям — оплата не нужна.
+      </p>
+    );
+  }
+
+  const monthLabel = isRenew ? "Продлить месяц" : "Оплатить месяц";
+  const yearLabel = isRenew ? "Продлить год" : "Оплатить год";
 
   return (
     <div className="space-y-3">
@@ -69,15 +86,22 @@ export function PlanCheckoutOptions({ compact = false }: Props) {
             </p>
             <Button
               className="min-h-10 w-full"
+              variant={isRenew ? "outline" : "default"}
               disabled={blocked}
               onClick={() => checkoutMutation.mutate("month")}
             >
-              Оплатить месяц
+              {monthLabel}
             </Button>
           </div>
         )}
         {year && (
-          <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-4">
+          <div
+            className={
+              isRenew
+                ? "space-y-3 rounded-md border border-border p-4"
+                : "space-y-3 rounded-md border border-primary/30 bg-primary/5 p-4"
+            }
+          >
             <p className="text-sm font-medium">Год</p>
             <p className="text-2xl font-semibold tracking-tight">
               {formatRub(kopecksToRub(year.monthly_kopecks))}
@@ -98,10 +122,11 @@ export function PlanCheckoutOptions({ compact = false }: Props) {
             )}
             <Button
               className="min-h-10 w-full"
+              variant={isRenew ? "outline" : "default"}
               disabled={blocked}
               onClick={() => checkoutMutation.mutate("year")}
             >
-              Оплатить год
+              {yearLabel}
             </Button>
           </div>
         )}
@@ -115,7 +140,7 @@ export function PlanCheckoutOptions({ compact = false }: Props) {
         </p>
       )}
 
-      {status?.complimentary && (
+      {complimentary && compact && (
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
           У вас complimentary‑доступ ко всем платным функциям.
         </p>

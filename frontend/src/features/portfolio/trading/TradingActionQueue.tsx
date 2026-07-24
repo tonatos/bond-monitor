@@ -51,7 +51,7 @@ function ReadOnlyTokenBanner() {
     >
       Ключ только для чтения — заявки недоступны. Мониторинг и аналитические сигналы
       работают. Чтобы выставлять заявки, сохраните full-access токен в{" "}
-      <Link to="/account" className="underline underline-offset-2">
+      <Link to="/account/keys" className="underline underline-offset-2">
         кабинете
       </Link>
       .

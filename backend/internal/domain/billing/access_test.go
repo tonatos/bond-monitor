@@ -100,7 +100,7 @@ func TestApplySuccessfulPayment_GrandfatherOnRenew(t *testing.T) {
 		AmountKopecks: 79500,
 		Features:      PaidFeaturesV1(),
 	}
-	out := ApplySuccessfulPayment(sub, newPlan, 1, "renew", now, "pm_1")
+	out := ApplySuccessfulPayment(sub, newPlan, 1, "renew", now, "pm_1", true)
 	if out.AmountKopecks != 50000 {
 		t.Fatalf("renew must keep grandfathered price, got %d", out.AmountKopecks)
 	}
@@ -126,7 +126,7 @@ func TestApplySuccessfulPayment_ChangePeriodAdoptsNewPlan(t *testing.T) {
 		AmountKopecks: 594000,
 		Features:      PaidFeaturesV1(),
 	}
-	out := ApplySuccessfulPayment(sub, year, 1, "change_period", now, "pm_2")
+	out := ApplySuccessfulPayment(sub, year, 1, "change_period", now, "pm_2", true)
 	if out.Period != PeriodYear || out.AmountKopecks != 594000 {
 		t.Fatalf("change_period must adopt yearly plan: %#v", out)
 	}

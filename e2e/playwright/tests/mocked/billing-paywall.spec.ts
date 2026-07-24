@@ -17,7 +17,7 @@ test.describe("Подписка — paywall", () => {
     await mockBondsEmpty(page);
     await seedAuth(page);
 
-    await page.goto("/account");
+    await page.goto("/account/keys");
     await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
     await expect(page.getByText(/Сохранение ключей доступно по подписке/)).toBeVisible();
     await expect(page.getByPlaceholder("Вставьте production-токен")).toHaveCount(0);
@@ -38,14 +38,54 @@ test.describe("Подписка — paywall", () => {
     await mockBondsEmpty(page);
     await seedAuth(page);
 
-    await page.goto("/account/plan");
+    await page.goto("/account");
     await expect(page.getByRole("heading", { name: "Instrumenta Pro" })).toBeVisible();
     await expect(page.getByText(/795/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Оплатить месяц/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Когда подписка окупается" })).toBeVisible();
     await expect(page.getByText(/28[,.]46%/)).toBeVisible();
     await expect(page.getByLabel("Размер капитала для инвестиций")).toBeVisible();
     await expect(page.getByText(/ключевой ставкой \(16%\)/)).toBeVisible();
-    await expect(page.getByText(/Уведомления в Telegram/i)).toBeVisible();
+    await expect(page.getByText(/Уведомления в Telegram/i )).toBeVisible();
+    await expect(page.getByText(/Активна до/i)).toHaveCount(0);
+  });
+
+  test("с активной подпиской виден маркер Pro и статус на тарифе", async ({ page }, testInfo) => {
+    await mockConfig(page);
+    await mockBillingStatus(page, { hasAccess: true });
+    await mockBillingCatalog(page);
+    await mockBondsEmpty(page);
+    await seedAuth(page);
+
+    await page.goto("/account");
+    await expect(page.getByRole("heading", { name: "Instrumenta Pro" })).toBeVisible();
+    await expect(page.getByText(/Активна до 1 января 2027/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Продлить или сменить период" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Продлить месяц/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Продлить год/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Оплатить месяц/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Pro до 1 января 2027/i }).first()).toBeVisible();
+
+    if (testInfo.project.name === "mobile") {
+      await page.goto("/");
+      const accountNav = page.getByRole("navigation", { name: "Мобильная навигация" });
+      await expect(accountNav.getByText("Pro", { exact: true })).toBeVisible();
+    } else {
+      await page.goto("/");
+      await expect(page.getByRole("link", { name: /Pro до 1 января 2027/i }).first()).toBeVisible();
+    }
+  });
+
+  test("без подписки маркера Pro в кабинете нет", async ({ page }) => {
+    await mockConfig(page);
+    await mockBillingStatus(page, { hasAccess: false });
+    await mockBillingCatalog(page);
+    await mockBondsEmpty(page);
+    await seedAuth(page);
+
+    await page.goto("/account");
+    await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Pro до/i })).toHaveCount(0);
   });
 
   test("финансы показывают пустой ledger", async ({ page }) => {

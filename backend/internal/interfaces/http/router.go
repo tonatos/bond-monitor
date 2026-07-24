@@ -116,6 +116,7 @@ func NewRouter(deps Deps, logger *slog.Logger) http.Handler {
 			r.Post("/checkout", h.PostBillingCheckout)
 			r.Post("/cancel", h.PostBillingCancel)
 			r.Post("/change-period", h.PostBillingChangePeriod)
+			r.Post("/sync", h.PostBillingSync)
 			r.Post("/webhooks/yookassa", h.PostYooKassaWebhook)
 		})
 	})

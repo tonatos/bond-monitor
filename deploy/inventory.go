@@ -51,6 +51,8 @@ type Inventory struct {
 
 	YooKassaShopID           string `yaml:"yookassa_shop_id"`
 	YooKassaSecretKey        string `yaml:"yookassa_secret_key"`
+	// YooKassaRecurring: save_payment_method + auto-renew. Default false (one-time prepaid).
+	YooKassaRecurring        bool   `yaml:"yookassa_recurring"`
 	ComplimentaryTelegramIDs string `yaml:"complimentary_telegram_ids"`
 
 	PostgresPassword string `yaml:"postgres_password"`

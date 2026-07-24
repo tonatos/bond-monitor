@@ -78,6 +78,7 @@ test.describe("Мастер режима торговли", () => {
         json: {
           complimentary: true,
           payment_enabled: false,
+          recurring_enabled: false,
           entitlements: [
             "broker_credentials.write",
             "portfolio.attach",

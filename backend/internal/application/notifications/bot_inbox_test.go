@@ -56,6 +56,9 @@ func (m *memBillingStore) GetPaymentByYooKassaID(context.Context, string) (*bill
 func (m *memBillingStore) GetPaymentByIdempotencyKey(context.Context, string) (*billing.Payment, error) {
 	return nil, nil
 }
+func (m *memBillingStore) ListPendingPaymentsByOwner(context.Context, int64) ([]billing.Payment, error) {
+	return nil, nil
+}
 func (m *memBillingStore) AddLedgerEntry(context.Context, billing.LedgerEntry) (billing.LedgerEntry, error) {
 	return billing.LedgerEntry{}, nil
 }
@@ -83,7 +86,7 @@ func openNotifyTestDB(t *testing.T) (*persistence.DB, *persistence.UserRepositor
 func TestSubscriptionTelegramGate(t *testing.T) {
 	_, users := openNotifyTestDB(t)
 	store := &memBillingStore{subs: map[int64]*billing.Subscription{}}
-	billingSvc := appbilling.NewService(store, yookassa.DisabledGateway{}, []int64{7}, "")
+	billingSvc := appbilling.NewService(store, yookassa.DisabledGateway{}, []int64{7}, "", false)
 	gate := &SubscriptionTelegramGate{Users: users, Billing: billingSvc}
 	ctx := context.Background()
 
@@ -115,7 +118,7 @@ func TestSubscriptionTelegramGate(t *testing.T) {
 func TestBotInbox_StartRequiresSubscription(t *testing.T) {
 	_, users := openNotifyTestDB(t)
 	store := &memBillingStore{subs: map[int64]*billing.Subscription{}}
-	billingSvc := appbilling.NewService(store, yookassa.DisabledGateway{}, nil, "")
+	billingSvc := appbilling.NewService(store, yookassa.DisabledGateway{}, nil, "", false)
 
 	var sent []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +162,7 @@ func TestBotInbox_StartRequiresSubscription(t *testing.T) {
 
 func TestBotInbox_SupportRelay(t *testing.T) {
 	_, users := openNotifyTestDB(t)
-	billingSvc := appbilling.NewService(&memBillingStore{subs: map[int64]*billing.Subscription{}}, yookassa.DisabledGateway{}, nil, "")
+	billingSvc := appbilling.NewService(&memBillingStore{subs: map[int64]*billing.Subscription{}}, yookassa.DisabledGateway{}, nil, "", false)
 
 	const supportChat int64 = -1001
 	type sentMsg struct {
@@ -222,7 +225,7 @@ func TestBotInbox_SupportRelay(t *testing.T) {
 
 func TestBotInbox_SupportDisabledAndCommands(t *testing.T) {
 	_, users := openNotifyTestDB(t)
-	billingSvc := appbilling.NewService(&memBillingStore{subs: map[int64]*billing.Subscription{}}, yookassa.DisabledGateway{}, nil, "")
+	billingSvc := appbilling.NewService(&memBillingStore{subs: map[int64]*billing.Subscription{}}, yookassa.DisabledGateway{}, nil, "", false)
 
 	var sent []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

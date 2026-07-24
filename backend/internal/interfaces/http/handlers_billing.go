@@ -191,6 +191,23 @@ func (h *Handler) PostBillingChangePeriod(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusCreated, res)
 }
 
+func (h *Handler) PostBillingSync(w http.ResponseWriter, r *http.Request) {
+	if h.deps.Billing == nil {
+		WriteClientError(w, http.StatusServiceUnavailable, "billing unavailable")
+		return
+	}
+	owner, _ := auth.OwnerTelegramID(r.Context())
+	activated, err := h.deps.Billing.SyncPendingPayments(r.Context(), owner)
+	if err != nil {
+		if WriteAppError(w, err) {
+			return
+		}
+		WriteClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]any{"ok": true, "activated": activated})
+}
+
 func (h *Handler) PostYooKassaWebhook(w http.ResponseWriter, r *http.Request) {
 	if h.deps.Billing == nil {
 		WriteClientError(w, http.StatusServiceUnavailable, "billing unavailable")

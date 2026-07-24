@@ -654,6 +654,7 @@ export interface BillingCatalogItem {
 export interface BillingCatalogResponse {
   plans: BillingCatalogItem[];
   payment_enabled: boolean;
+  recurring_enabled: boolean;
 }
 
 export interface BillingSubscriptionStatus {
@@ -668,6 +669,7 @@ export interface BillingSubscriptionStatus {
 export interface BillingStatusResponse {
   complimentary: boolean;
   payment_enabled: boolean;
+  recurring_enabled: boolean;
   entitlements: string[];
   has_active_access: boolean;
   subscription?: BillingSubscriptionStatus | null;

@@ -85,8 +85,8 @@ Marketing may simplify wording; must not distort facts.
 | Scenario | Route |
 |----------|-------|
 | Guest on landing | Telegram login / `/login` |
-| Plan | `/account/plan` |
-| Broker keys | `/account` |
+| Plan | `/account` |
+| Broker keys | `/account/keys` |
 | Bot notifications | `/account/notifications` |
 | Simulation / trading | portfolios + trading queue / deploy session |
 | Market | `/radar` |

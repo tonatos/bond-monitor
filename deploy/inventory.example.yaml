@@ -53,6 +53,8 @@ telegram_bot_token: ""
 # Billing / YooKassa (leave empty until shop is ready — catalog/UI still work)
 yookassa_shop_id: ""
 yookassa_secret_key: ""
+# true only after YooMoney enables recurring payments for the shop; default false = prepaid one-time
+yookassa_recurring: false
 # Comma-separated Telegram IDs with free Pro (empty = nobody)
 complimentary_telegram_ids: ""
 

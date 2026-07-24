@@ -50,6 +50,7 @@ func TestRenderEnv(t *testing.T) {
 		"DEV_TELEGRAM_ID=1",
 		"NOTIFIER_SCAN_INTERVAL_SEC=3600",
 		"COMPLIMENTARY_TELEGRAM_IDS=111999777",
+		"YOOKASSA_RECURRING=false",
 		"POSTGRES_PASSWORD=pg-secret",
 		"DATABASE_URL=postgres://instrumenta:pg-secret@db:5432/instrumenta?sslmode=disable",
 	}

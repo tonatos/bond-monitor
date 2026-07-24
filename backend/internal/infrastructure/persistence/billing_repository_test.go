@@ -38,7 +38,7 @@ func TestBillingRepository_SeedAndSubscription(t *testing.T) {
 	}
 
 	now := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
-	sub := billing.ApplySuccessfulPayment(nil, *month, 42, "checkout", now, "pm_test")
+	sub := billing.ApplySuccessfulPayment(nil, *month, 42, "checkout", now, "pm_test", true)
 	saved, err := repo.SaveSubscription(ctx, sub)
 	if err != nil {
 		t.Fatal(err)

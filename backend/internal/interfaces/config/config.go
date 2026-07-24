@@ -54,6 +54,9 @@ type Settings struct {
 	YooKassaShopID     string
 	YooKassaSecretKey  string
 	YooKassaReturnURL  string
+	// YooKassaRecurring enables save_payment_method + notifier auto-charges.
+	// Default false: prepaid one-time periods (most shops lack recurring entitlement).
+	YooKassaRecurring bool
 	ComplimentaryTelegramIDs []int64
 }
 
@@ -137,6 +140,7 @@ func Load() Settings {
 		YooKassaShopID:           strings.TrimSpace(os.Getenv("YOOKASSA_SHOP_ID")),
 		YooKassaSecretKey:        strings.TrimSpace(os.Getenv("YOOKASSA_SECRET_KEY")),
 		YooKassaReturnURL:        strings.TrimSpace(os.Getenv("YOOKASSA_RETURN_URL")),
+		YooKassaRecurring:        envBool("YOOKASSA_RECURRING", false),
 		// Empty = nobody complimentary. Prod default lives in deploy/inventory.go.
 		ComplimentaryTelegramIDs: envInt64CSV("COMPLIMENTARY_TELEGRAM_IDS", nil),
 	}

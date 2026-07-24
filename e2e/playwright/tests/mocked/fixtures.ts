@@ -70,6 +70,7 @@ export async function mockBillingStatus(
       json: {
         complimentary,
         payment_enabled: false,
+        recurring_enabled: false,
         entitlements,
         has_active_access: hasAccess || complimentary,
         subscription: hasAccess && !complimentary
@@ -92,6 +93,7 @@ export async function mockBillingCatalog(page: Page): Promise<void> {
     await route.fulfill({
       json: {
         payment_enabled: false,
+        recurring_enabled: false,
         plans: [
           {
             period: "month",

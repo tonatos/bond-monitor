@@ -32,20 +32,22 @@ type Store interface {
 	GetPaymentByID(ctx context.Context, id string) (*billing.Payment, error)
 	GetPaymentByYooKassaID(ctx context.Context, yooID string) (*billing.Payment, error)
 	GetPaymentByIdempotencyKey(ctx context.Context, key string) (*billing.Payment, error)
+	ListPendingPaymentsByOwner(ctx context.Context, ownerTelegramID int64) ([]billing.Payment, error)
 	AddLedgerEntry(ctx context.Context, e billing.LedgerEntry) (billing.LedgerEntry, error)
 	ListLedger(ctx context.Context, ownerTelegramID int64, limit int) ([]billing.LedgerEntry, error)
 }
 
 // Service orchestrates billing use cases.
 type Service struct {
-	Store            Store
-	Gateway          yookassa.PaymentGateway
-	ComplimentaryIDs map[int64]struct{}
-	ReturnURL        string
-	Policy           billing.Policy
+	Store             Store
+	Gateway           yookassa.PaymentGateway
+	ComplimentaryIDs  map[int64]struct{}
+	ReturnURL         string
+	Policy            billing.Policy
+	RecurringEnabled  bool // YOOKASSA_RECURRING: save_payment_method + auto-renew charges
 }
 
-func NewService(store Store, gateway yookassa.PaymentGateway, complimentary []int64, returnURL string) *Service {
+func NewService(store Store, gateway yookassa.PaymentGateway, complimentary []int64, returnURL string, recurringEnabled bool) *Service {
 	ids := make(map[int64]struct{}, len(complimentary))
 	for _, id := range complimentary {
 		ids[id] = struct{}{}
@@ -59,6 +61,7 @@ func NewService(store Store, gateway yookassa.PaymentGateway, complimentary []in
 		ComplimentaryIDs: ids,
 		ReturnURL:        returnURL,
 		Policy:           billing.DefaultPolicy(),
+		RecurringEnabled: recurringEnabled,
 	}
 }
 
@@ -105,8 +108,9 @@ func (s *Service) HasFeature(ctx context.Context, ownerTelegramID int64, feature
 
 // CatalogDTO is API catalog payload.
 type CatalogDTO struct {
-	Plans          []billing.CatalogItem `json:"plans"`
-	PaymentEnabled bool                  `json:"payment_enabled"`
+	Plans             []billing.CatalogItem `json:"plans"`
+	PaymentEnabled    bool                  `json:"payment_enabled"`
+	RecurringEnabled  bool                  `json:"recurring_enabled"`
 }
 
 func (s *Service) GetCatalog(ctx context.Context) (CatalogDTO, error) {
@@ -136,8 +140,9 @@ func (s *Service) GetCatalog(ctx context.Context) (CatalogDTO, error) {
 		items = append(items, item)
 	}
 	return CatalogDTO{
-		Plans:          items,
-		PaymentEnabled: s.PaymentEnabled(),
+		Plans:            items,
+		PaymentEnabled:   s.PaymentEnabled(),
+		RecurringEnabled: s.RecurringEnabled,
 	}, nil
 }
 
@@ -145,6 +150,7 @@ func (s *Service) GetCatalog(ctx context.Context) (CatalogDTO, error) {
 type StatusDTO struct {
 	Complimentary    bool     `json:"complimentary"`
 	PaymentEnabled   bool     `json:"payment_enabled"`
+	RecurringEnabled bool     `json:"recurring_enabled"`
 	Entitlements     []string `json:"entitlements"`
 	HasActiveAccess  bool     `json:"has_active_access"`
 	Subscription     *SubDTO  `json:"subscription,omitempty"`
@@ -171,10 +177,11 @@ func (s *Service) GetStatus(ctx context.Context, ownerTelegramID int64) (StatusD
 		entStr = append(entStr, string(f))
 	}
 	dto := StatusDTO{
-		Complimentary:   s.IsComplimentary(ownerTelegramID),
-		PaymentEnabled:  s.PaymentEnabled(),
-		Entitlements:    entStr,
-		HasActiveAccess: len(ents) > 0,
+		Complimentary:    s.IsComplimentary(ownerTelegramID),
+		PaymentEnabled:   s.PaymentEnabled(),
+		RecurringEnabled: s.RecurringEnabled,
+		Entitlements:     entStr,
+		HasActiveAccess:  len(ents) > 0,
 	}
 	if in.Subscription != nil {
 		feats := make([]string, 0, len(in.Subscription.Features))
@@ -251,11 +258,11 @@ func (s *Service) CreateCheckout(ctx context.Context, ownerTelegramID int64, per
 		desc = "Instrumenta Pro — год"
 	}
 	created, err := s.Gateway.CreatePayment(ctx, yookassa.CreatePaymentRequest{
-		AmountKopecks:       plan.AmountKopecks,
-		Description:         desc,
-		ReturnURL:           s.ReturnURL,
-		IdempotencyKey:      idem,
-		SavePaymentMethod:   true,
+		AmountKopecks:     plan.AmountKopecks,
+		Description:       desc,
+		ReturnURL:         s.ReturnURL,
+		IdempotencyKey:    idem,
+		SavePaymentMethod: s.RecurringEnabled,
 		Metadata: map[string]string{
 			"owner_telegram_id": strconv.FormatInt(ownerTelegramID, 10),
 			"payment_id":        pay.ID,
@@ -360,6 +367,41 @@ func (s *Service) HandleYooKassaWebhook(ctx context.Context, yooPaymentID string
 	return s.applyVerifiedPayment(ctx, *pay, info.PaymentMethodID)
 }
 
+// SyncPendingPayments re-fetches pending YooKassa payments for the owner and activates
+// succeeded ones. Used after return_url when webhooks cannot reach the API (localhost).
+func (s *Service) SyncPendingPayments(ctx context.Context, ownerTelegramID int64) (activated int, err error) {
+	if !s.PaymentEnabled() {
+		return 0, ErrPaymentUnavailable
+	}
+	pending, err := s.Store.ListPendingPaymentsByOwner(ctx, ownerTelegramID)
+	if err != nil {
+		return 0, err
+	}
+	for _, pay := range pending {
+		if pay.YooKassaPaymentID == "" {
+			continue
+		}
+		before, err := s.Store.GetPaymentByID(ctx, pay.ID)
+		if err != nil {
+			return activated, err
+		}
+		if before != nil && before.Status == billing.PaymentSucceeded {
+			continue
+		}
+		if err := s.HandleYooKassaWebhook(ctx, pay.YooKassaPaymentID); err != nil {
+			return activated, err
+		}
+		after, err := s.Store.GetPaymentByID(ctx, pay.ID)
+		if err != nil {
+			return activated, err
+		}
+		if after != nil && after.Status == billing.PaymentSucceeded {
+			activated++
+		}
+	}
+	return activated, nil
+}
+
 func (s *Service) applyVerifiedPayment(ctx context.Context, pay billing.Payment, paymentMethodID string) error {
 	plan, err := s.Store.GetPlanVersionByID(ctx, pay.PlanVersionID)
 	if err != nil {
@@ -373,7 +415,9 @@ func (s *Service) applyVerifiedPayment(ctx context.Context, pay billing.Payment,
 	if err != nil {
 		return err
 	}
-	updated := billing.ApplySuccessfulPayment(existing, *plan, pay.OwnerTelegramID, pay.Purpose, now, paymentMethodID)
+	updated := billing.ApplySuccessfulPayment(
+		existing, *plan, pay.OwnerTelegramID, pay.Purpose, now, paymentMethodID, s.RecurringEnabled,
+	)
 	if _, err := s.Store.SaveSubscription(ctx, updated); err != nil {
 		return err
 	}
@@ -430,8 +474,11 @@ func (s *Service) RenewDue(ctx context.Context, now time.Time) (renewed, failed,
 			expired++
 			continue
 		}
-		if !billing.ShouldAttemptRenew(sub, now) {
-			if sub.CancelAtPeriodEnd && (sub.CurrentPeriodEnd.Before(now) || sub.CurrentPeriodEnd.Equal(now)) {
+		if !s.RecurringEnabled || !billing.ShouldAttemptRenew(sub, now) {
+			// One-time mode never charges; expire when the prepaid period ends.
+			// Recurring mode expires only soft-canceled (or falls through after ShouldExpireCanceled).
+			periodEnded := !sub.CurrentPeriodEnd.After(now)
+			if periodEnded && (!s.RecurringEnabled || sub.CancelAtPeriodEnd) {
 				updated := billing.MarkExpired(sub, now)
 				if _, e := s.Store.SaveSubscription(ctx, updated); e != nil {
 					return renewed, failed, expired, e

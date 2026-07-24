@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { SettingsSheet } from "@/features/settings/SettingsSheet";
 import { useAuth } from "@/features/auth/AuthContext";
+import { ProStatusBadge } from "@/features/billing/ProStatusBadge";
+import { hasProAccess } from "@/features/billing/proStatus";
 import { supportBotDeepLink } from "@/features/support/supportDeepLink";
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
@@ -43,6 +45,12 @@ export function AppShell() {
     queryKey: ["auth-me"],
     queryFn: () => api.getMe(),
   });
+  const { data: billingStatus } = useQuery({
+    queryKey: ["billing-status"],
+    queryFn: () => api.getBillingStatus(),
+  });
+  const showPro = hasProAccess(billingStatus);
+  const proEndAt = billingStatus?.subscription?.current_period_end ?? null;
   const supportHref = supportBotDeepLink(
     me?.telegram_bot?.configured ? me.telegram_bot.deep_link : undefined,
   );
@@ -98,23 +106,33 @@ export function AppShell() {
             </a>
           </div>
         ) : null}
-        <div className="flex shrink-0 gap-2 border-t border-border p-4">
-          {authEnabled && displayName && (
-            <div className="flex min-w-0 flex-1 items-center text-xs text-muted-foreground">
-              <span className="truncate">{displayName}</span>
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border p-4">
+          {(showPro || (authEnabled && displayName)) && (
+            <div className="flex min-w-0 flex-col gap-1.5">
+              {authEnabled && displayName && (
+                <span className="truncate text-xs text-muted-foreground">{displayName}</span>
+              )}
+              {showPro && (
+                <ProStatusBadge
+                  endAt={proEndAt}
+                  complimentary={Boolean(billingStatus?.complimentary)}
+                />
+              )}
             </div>
           )}
-          {authEnabled && (
-            <Button variant="outline" size="icon" onClick={logout} aria-label="Выйти">
-              <LogOut className="h-4 w-4" />
+          <div className="flex gap-2">
+            {authEnabled && (
+              <Button variant="outline" size="icon" onClick={logout} aria-label="Выйти">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="outline" size="icon" onClick={toggle} aria-label="Переключить тему">
+              {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={toggle} aria-label="Переключить тему">
-            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Настройки">
-            <Settings className="h-4 w-4" />
-          </Button>
+            <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Настройки">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </aside>
 
@@ -177,6 +195,17 @@ export function AppShell() {
                 {to === "/favorites" && favorites && favorites.count > 0 && (
                   <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
                     {favorites.count > 99 ? "99+" : favorites.count}
+                  </span>
+                )}
+                {to === "/account" && showPro && (
+                  <span className="absolute -right-3 -top-1.5">
+                    <ProStatusBadge
+                      compact
+                      endAt={proEndAt}
+                      complimentary={Boolean(billingStatus?.complimentary)}
+                      linkToPlan={false}
+                      className="pointer-events-none"
+                    />
                   </span>
                 )}
               </span>

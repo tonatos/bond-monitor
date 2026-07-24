@@ -50,9 +50,10 @@ export function App() {
                       <Route path="radar" element={<RadarPage />} />
                       <Route path="calculator" element={<CalculatorPage />} />
                       <Route path="account" element={<AccountLayout />}>
-                        <Route index element={<AccountKeysPage />} />
+                        <Route index element={<PlanPage />} />
+                        <Route path="plan" element={<Navigate to="/account" replace />} />
+                        <Route path="keys" element={<AccountKeysPage />} />
                         <Route path="notifications" element={<NotificationsPage />} />
-                        <Route path="plan" element={<PlanPage />} />
                         <Route path="finance" element={<FinancePage />} />
                       </Route>
                       <Route path="*" element={<Navigate to="/" replace />} />

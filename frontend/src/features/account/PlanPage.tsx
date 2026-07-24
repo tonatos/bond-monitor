@@ -1,10 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlanCheckoutOptions } from "@/features/billing/PlanCheckoutOptions";
+import { ProStatusBadge } from "@/features/billing/ProStatusBadge";
+import {
+  hasProAccess,
+  periodLabel,
+  proActiveHeadline,
+  renewalHint,
+} from "@/features/billing/proStatus";
 import { formatRub } from "@/lib/utils";
 
 /** Marketing teaser: expected net yield of auto-compose (not from API). */
@@ -51,6 +58,26 @@ export function PlanPage() {
     queryKey: ["billing-status"],
     queryFn: () => api.getBillingStatus(),
   });
+
+  // After YooKassa return_url: sync pending payments (webhooks cannot reach localhost).
+  useEffect(() => {
+    if (!paymentReturn) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await api.syncBillingPayments();
+      } catch {
+        // Status refresh below still shows current state; user can retry via Обновить.
+      }
+      if (!cancelled) {
+        await queryClient.invalidateQueries({ queryKey: ["billing-status"] });
+        await queryClient.invalidateQueries({ queryKey: ["billing-ledger"] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentReturn, queryClient]);
 
   const changeMutation = useMutation({
     mutationFn: () => api.changeBillingPeriod("year"),
@@ -101,51 +128,73 @@ export function PlanPage() {
     );
   }
 
-  const hasAccess = Boolean(status?.has_active_access || status?.complimentary);
+  const hasAccess = hasProAccess(status);
   const paymentEnabled = Boolean(catalog?.payment_enabled ?? status?.payment_enabled);
+  const recurringEnabled = Boolean(catalog?.recurring_enabled ?? status?.recurring_enabled);
+  const sub = status?.subscription ?? null;
+  const complimentary = Boolean(status?.complimentary);
+  const endAt = sub?.current_period_end ?? null;
+  const renewHint = sub
+    ? renewalHint({
+        recurringEnabled,
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+      })
+    : null;
 
   return (
     <div className="space-y-8">
       {paymentReturn && (
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-          Если оплата прошла успешно, статус обновится в течение минуты.{" "}
+          Проверяем оплату у ЮKassa… Если статус не обновился — нажмите{" "}
           <button
             type="button"
             className="underline underline-offset-2"
-            onClick={() => void queryClient.invalidateQueries({ queryKey: ["billing-status"] })}
+            onClick={() => {
+              void (async () => {
+                try {
+                  await api.syncBillingPayments();
+                } catch {
+                  /* ignore; refresh still helps after webhook */
+                }
+                await queryClient.invalidateQueries({ queryKey: ["billing-status"] });
+                await queryClient.invalidateQueries({ queryKey: ["billing-ledger"] });
+              })();
+            }}
           >
             Обновить
           </button>
         </p>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Instrumenta Pro</h2>
-        <p className="text-sm text-muted-foreground">
-          Подписка открывает привязку брокерского счёта и сохранение ключей T‑Invest. Скринер,
-          симуляция, radar и избранное остаются бесплатными после входа через Telegram.
-        </p>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-          <li>Уведомления в Telegram о пут‑офертах и эскалации риска</li>
-          <li>Очередь действий: покупки, реинвест, срочные продажи</li>
-          <li>Market radar и сигналы по удерживаемым бумагам</li>
-        </ul>
-      </section>
-
-      <PlanCheckoutOptions />
-
-      {status?.subscription && (
-        <section className="space-y-3 rounded-md border border-border p-4">
-          <h3 className="text-sm font-medium">Текущая подписка</h3>
+      {hasAccess ? (
+        <section className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-medium">Instrumenta Pro</h2>
+            <ProStatusBadge
+              endAt={endAt}
+              complimentary={complimentary}
+              linkToPlan={false}
+            />
+          </div>
+          <p className="text-xl font-semibold tracking-tight">
+            {proActiveHeadline({ endAt, complimentary })}
+          </p>
           <p className="text-sm text-muted-foreground">
-            Статус: {status.subscription.status} · период: {status.subscription.period} · до{" "}
-            {new Date(status.subscription.current_period_end).toLocaleDateString("ru-RU")}
-            {status.subscription.cancel_at_period_end ? " · автопродление отключено" : ""}
+            {[
+              sub ? `Период: ${periodLabel(sub.period)}` : null,
+              sub ? `${formatRub(kopecksToRub(sub.amount_kopecks))} / ${sub.period === "year" ? "год" : "мес"}` : null,
+              renewHint,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Включено: ключи брокера, trading‑портфель, уведомления в Telegram.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
-            {status.subscription.period === "month" && hasAccess && (
+            {sub?.period === "month" && hasAccess && !complimentary && (
               <Button
-                variant="outline"
+                variant="default"
                 className="min-h-10"
                 disabled={!paymentEnabled || changeMutation.isPending}
                 onClick={() => changeMutation.mutate()}
@@ -153,18 +202,44 @@ export function PlanPage() {
                 Перейти на год
               </Button>
             )}
-            {!status.subscription.cancel_at_period_end && hasAccess && !status.complimentary && (
-              <Button
-                variant="outline"
-                className="min-h-10"
-                disabled={cancelMutation.isPending}
-                onClick={() => cancelMutation.mutate()}
-              >
-                Отменить автопродление
-              </Button>
-            )}
+            {recurringEnabled &&
+              sub &&
+              !sub.cancel_at_period_end &&
+              hasAccess &&
+              !complimentary && (
+                <Button
+                  variant="outline"
+                  className="min-h-10"
+                  disabled={cancelMutation.isPending}
+                  onClick={() => cancelMutation.mutate()}
+                >
+                  Отменить автопродление
+                </Button>
+              )}
           </div>
         </section>
+      ) : (
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Instrumenta Pro</h2>
+          <p className="text-sm text-muted-foreground">
+            Подписка открывает привязку брокерского счёта и сохранение ключей T‑Invest. Скринер,
+            симуляция, radar и избранное остаются бесплатными после входа через Telegram.
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Уведомления в Telegram о пут‑офертах и эскалации риска</li>
+            <li>Очередь действий: покупки, реинвест, срочные продажи</li>
+            <li>Market radar и сигналы по удерживаемым бумагам</li>
+          </ul>
+        </section>
+      )}
+
+      {hasAccess && !complimentary ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-medium">Продлить или сменить период</h3>
+          <PlanCheckoutOptions renewMode />
+        </section>
+      ) : (
+        <PlanCheckoutOptions />
       )}
 
       <section className="space-y-4">
@@ -206,7 +281,7 @@ export function PlanPage() {
 
       <p className="text-sm text-muted-foreground">
         Нужны ключи брокера?{" "}
-        <Link to="/account" className="underline underline-offset-2">
+        <Link to="/account/keys" className="underline underline-offset-2">
           Перейти к ключам
         </Link>
         . Telegram-уведомления:{" "}

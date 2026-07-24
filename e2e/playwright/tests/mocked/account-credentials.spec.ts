@@ -27,7 +27,7 @@ test.describe("Личный кабинет — брокерские ключи",
       });
     });
 
-    await page.goto("/account");
+    await page.goto("/account/keys");
     await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
     await expect.poll(() => authorization).toBe("Bearer account-page-jwt");
     await expect(page.getByText(/сохранён · abcd1234/)).toBeVisible();
@@ -56,7 +56,7 @@ test.describe("Личный кабинет — брокерские ключи",
       await route.continue();
     });
 
-    await page.goto("/account");
+    await page.goto("/account/keys");
     await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
     await expect(page.getByText("Production", { exact: true })).toBeVisible();
     await expect(page.getByText("Песочница (опционально)")).toBeVisible();
@@ -79,7 +79,7 @@ test.describe("Личный кабинет — брокерские ключи",
     await mockBondsEmpty(page);
     await mockAuthMe(page, { production: true, productionTradeEnabled: false });
 
-    await page.goto("/account");
+    await page.goto("/account/keys");
     await expect(page.getByTestId("token-issue-instructions")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Как выпустить ключ" })).toBeVisible();
     await expect(page.getByText("только чтение")).toBeVisible();
@@ -138,7 +138,8 @@ test.describe("Личный кабинет — брокерские ключи",
 
     await page.goto("/portfolio");
     await page.getByRole("link", { name: "Перевести в торговлю" }).click();
-    await expect(page).toHaveURL(/\/account/);
+    await expect(page).toHaveURL(/\/account\/keys/);
     await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ключи", exact: true })).toBeVisible();
   });
 });

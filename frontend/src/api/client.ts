@@ -418,4 +418,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ period }),
     }),
+  syncBillingPayments: () =>
+    request<{ ok: boolean; activated: number }>("/billing/sync", { method: "POST" }),
 };

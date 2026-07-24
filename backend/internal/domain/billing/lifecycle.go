@@ -5,6 +5,10 @@ import "time"
 // ApplySuccessfulPayment activates or extends a subscription after a verified payment.
 // Grandfathering: renewals keep sub.AmountKopecks / Features; first payment / change_period
 // adopt plan version amounts and features.
+//
+// recurring=true: save paymentMethodID and keep auto-renew (CancelAtPeriodEnd=false).
+// recurring=false: prepaid one-time period — clear payment method and set CancelAtPeriodEnd
+// so RenewDue expires at period end without charging.
 func ApplySuccessfulPayment(
 	sub *Subscription,
 	plan PlanVersion,
@@ -12,9 +16,13 @@ func ApplySuccessfulPayment(
 	purpose string,
 	now time.Time,
 	paymentMethodID string,
+	recurring bool,
 ) Subscription {
 	if now.IsZero() {
 		now = time.Now().UTC()
+	}
+	if !recurring {
+		paymentMethodID = ""
 	}
 	if sub == nil {
 		features := append([]Feature(nil), plan.Features...)
@@ -27,7 +35,7 @@ func ApplySuccessfulPayment(
 			Features:           features,
 			CurrentPeriodStart: now,
 			CurrentPeriodEnd:   now.Add(PeriodDuration(plan.Period)),
-			CancelAtPeriodEnd:  false,
+			CancelAtPeriodEnd:  !recurring,
 			PaymentMethodID:    paymentMethodID,
 			PastDueSince:       nil,
 			CreatedAt:          now,
@@ -39,9 +47,12 @@ func ApplySuccessfulPayment(
 	out.UpdatedAt = now
 	out.Status = StatusActive
 	out.PastDueSince = nil
-	out.CancelAtPeriodEnd = false
-	if paymentMethodID != "" {
+	out.CancelAtPeriodEnd = !recurring
+	if recurring && paymentMethodID != "" {
 		out.PaymentMethodID = paymentMethodID
+	}
+	if !recurring {
+		out.PaymentMethodID = ""
 	}
 
 	switch purpose {

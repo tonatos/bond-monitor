@@ -296,7 +296,7 @@ export function TradingModeWizard({
   if (!canAttach) {
     return (
       <Button size="sm" className="gap-1.5" asChild>
-        <Link to="/account">
+        <Link to="/account/keys">
           <Wifi className="h-4 w-4" />
           Перевести в торговлю
         </Link>
