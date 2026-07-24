@@ -21,6 +21,7 @@ import { RateScenarioProvider } from "@/features/settings/RateScenarioProvider";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { OfferPage } from "@/features/landing/OfferPage";
 import { SecurityPage } from "@/features/landing/SecurityPage";
+import { GoogleAnalytics } from "@/features/analytics/GoogleAnalytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ export function App() {
           <AuthProvider>
             <SubscriptionPaywallProvider>
               <BrowserRouter>
+                <GoogleAnalytics />
                 <Routes>
                   <Route path="/landing" element={<LandingPage />} />
                   <Route path="/offer" element={<OfferPage />} />

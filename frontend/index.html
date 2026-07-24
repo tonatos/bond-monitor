@@ -17,6 +17,17 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1WT8FF45TN"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      // page_view шлёт React (GoogleAnalytics) при навигации SPA
+      gtag("config", "G-1WT8FF45TN", { send_page_view: false });
+    </script>
     <script>
       (function () {
         const theme = localStorage.getItem("theme") || "dark";
