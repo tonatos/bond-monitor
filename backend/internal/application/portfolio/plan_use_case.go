@@ -107,7 +107,9 @@ func (u *PlanUseCase) buildTradingPlanSnapshot(
 	historical := trading.OperationsToCashflowEvents(ops, today)
 	brokerCash := float64(snapshot.MoneyRub)
 	historical, delta, largeNote := trading.ReconcileCashToBroker(historical, today, brokerCash)
-	invested := domain.InvestedCapitalFromPositions(positions, snapshot.MoneyRub)
+	perfPortfolio := p
+	perfPortfolio.Positions = positions
+	invested := float64(trading.EpisodeCapital(perfPortfolio, snapshot, ops))
 	planCtx := domain.PlanContext{
 		Mode:               domain.PlanModeTrading,
 		Positions:          positions,

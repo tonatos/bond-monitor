@@ -167,9 +167,19 @@ func (u *AdviseUseCase) GetPerformance(ctx context.Context, portfolioID string) 
 	perfPortfolio.Positions = positions
 	perf := trading.SummarizeActualPerformance(perfPortfolio, brokerSnapshot, tinvest.ToBrokerOperations(ops), today)
 	return map[string]any{
+		"total_value_rub":      float64(perf.TotalValueRub),
+		"net_profit_rub":       float64(perf.NetProfitRub),
+		"funded_rub":           float64(perf.FundedRub),
+		"annual_yield_pct":     perf.AnnualYieldPct,
 		"xirr_pct":             perf.XIRRPct,
-		"coupons_received_rub": perf.CouponsReceivedRub,
-		"tax_paid_rub":         perf.TaxPaidRub,
+		"coupons_received_rub": float64(perf.CouponsReceivedRub),
+		"tax_paid_rub":         float64(perf.TaxPaidRub),
+		"commission_paid_rub":  float64(perf.CommissionPaidRub),
+		"realized_profit_rub":  float64(perf.RealizedProfitRub),
+		"unrealized_value_rub": float64(perf.UnrealizedValueRub),
+		"invested_rub":         float64(perf.InvestedRub),
+		"received_rub":         float64(perf.ReceivedRub),
+		"as_of":                perf.AsOf,
 		"money_rub":            float64(snapshot.MoneyRub),
 	}, nil
 }

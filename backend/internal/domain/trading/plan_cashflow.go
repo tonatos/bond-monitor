@@ -13,7 +13,13 @@ const cashReconcileNoteThresholdRub = 1_000
 
 var operationCashflowKinds = map[string]string{
 	"OPERATION_TYPE_INPUT":               "deposit",
+	"OPERATION_TYPE_INP_MULTI":           "deposit",
+	"OPERATION_TYPE_INPUT_SWIFT":         "deposit",
+	"OPERATION_TYPE_INPUT_ACQUIRING":     "deposit",
 	"OPERATION_TYPE_OUTPUT":              "withdrawal",
+	"OPERATION_TYPE_OUT_MULTI":           "withdrawal",
+	"OPERATION_TYPE_OUTPUT_SWIFT":        "withdrawal",
+	"OPERATION_TYPE_OUTPUT_ACQUIRING":    "withdrawal",
 	"OPERATION_TYPE_BUY":                 "purchase",
 	"OPERATION_TYPE_BUY_CARD":            "purchase",
 	"OPERATION_TYPE_BUY_MARGIN":          "purchase",
@@ -102,7 +108,7 @@ func InvestedCapitalFromOperations(ops []BrokerOperation) float64 {
 		if op.State != "" && op.State != "OPERATION_STATE_EXECUTED" {
 			continue
 		}
-		if !outflowTypes[op.Type] || op.PaymentRub == nil {
+		if operationCashflowKinds[op.Type] != "purchase" || op.PaymentRub == nil {
 			continue
 		}
 		total += -float64(*op.PaymentRub)

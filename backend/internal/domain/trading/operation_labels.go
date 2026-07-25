@@ -4,7 +4,13 @@ import "strings"
 
 var operationTypeLabels = map[string]string{
 	"OPERATION_TYPE_INPUT":                    "Пополнение",
+	"OPERATION_TYPE_INP_MULTI":                "Пополнение",
+	"OPERATION_TYPE_INPUT_SWIFT":              "Пополнение",
+	"OPERATION_TYPE_INPUT_ACQUIRING":          "Пополнение",
 	"OPERATION_TYPE_OUTPUT":                   "Вывод",
+	"OPERATION_TYPE_OUT_MULTI":                "Вывод",
+	"OPERATION_TYPE_OUTPUT_SWIFT":             "Вывод",
+	"OPERATION_TYPE_OUTPUT_ACQUIRING":         "Вывод",
 	"OPERATION_TYPE_BUY":                      "Покупка",
 	"OPERATION_TYPE_BUY_CARD":                 "Покупка",
 	"OPERATION_TYPE_BUY_MARGIN":               "Покупка",

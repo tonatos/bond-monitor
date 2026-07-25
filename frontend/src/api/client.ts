@@ -28,6 +28,7 @@ import type {
   BillingCheckoutResponse,
   BillingLedgerResponse,
   BillingPeriod,
+  PerformanceData,
 } from "./types";
 import { getAuthToken, notifyUnauthorized } from "@/features/auth/authStorage";
 import { notifySubscriptionRequired } from "@/features/billing/subscriptionPaywallBus";
@@ -366,12 +367,7 @@ export const api = {
       `/portfolios/${id}/positions/${encodeURIComponent(isin)}/sell-quote`,
     ),
   getPerformance: (id: string) =>
-    request<{
-      xirr_pct: number | null;
-      coupons_received_rub: number;
-      tax_paid_rub: number;
-      money_rub: number;
-    } | null>(`/portfolios/${id}/performance`),
+    request<PerformanceData & { money_rub?: number } | null>(`/portfolios/${id}/performance`),
   getAccountOperations: (id: string) =>
     request<AccountOperationsResponse>(`/portfolios/${id}/account-operations`),
 

@@ -11,7 +11,7 @@ import (
 	"github.com/tonatos/instrumenta/backend/internal/infrastructure/tinvest"
 )
 
-const operationsLookbackDays = 365
+const operationsLookbackDays = 365 * 5
 
 // TradingStateUseCase returns combined trading plan + advice.
 type TradingStateUseCase struct {

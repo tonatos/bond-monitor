@@ -382,6 +382,10 @@ func AdviceToResponse(result application.TradingAdviceResult) TradingAdviceRespo
 	if result.Performance != nil {
 		p := result.Performance
 		performance = &PerformanceDataResponse{
+			TotalValueRub:      float64(p.TotalValueRub),
+			NetProfitRub:       float64(p.NetProfitRub),
+			FundedRub:          float64(p.FundedRub),
+			AnnualYieldPct:     p.AnnualYieldPct,
 			XIRRPct:            p.XIRRPct,
 			CouponsReceivedRub: float64(p.CouponsReceivedRub),
 			TaxPaidRub:         float64(p.TaxPaidRub),

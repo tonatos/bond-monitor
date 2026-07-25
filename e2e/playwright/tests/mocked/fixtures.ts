@@ -221,6 +221,26 @@ export function makeAdvice(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Fact performance payload for advice.performance (Результат tab). */
+export function makePerformance(overrides: Record<string, unknown> = {}) {
+  return {
+    total_value_rub: 103_000,
+    net_profit_rub: 3_000,
+    funded_rub: 100_000,
+    annual_yield_pct: 12.17,
+    xirr_pct: 12.17,
+    coupons_received_rub: 0,
+    tax_paid_rub: 0,
+    commission_paid_rub: 0,
+    realized_profit_rub: 3_000,
+    unrealized_value_rub: 95_000,
+    invested_rub: 100_000,
+    received_rub: 0,
+    as_of: "2026-07-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
 export function makeTradingPortfolio(
   id: string,
   overrides: Record<string, unknown> = {},

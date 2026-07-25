@@ -289,6 +289,10 @@ type ActiveOrderResponse struct {
 }
 
 type PerformanceDataResponse struct {
+	TotalValueRub      float64  `json:"total_value_rub"`
+	NetProfitRub       float64  `json:"net_profit_rub"`
+	FundedRub          float64  `json:"funded_rub"`
+	AnnualYieldPct     *float64 `json:"annual_yield_pct"`
 	XIRRPct            *float64 `json:"xirr_pct"`
 	CouponsReceivedRub float64  `json:"coupons_received_rub"`
 	TaxPaidRub         float64  `json:"tax_paid_rub"`

@@ -7,7 +7,7 @@ export function portfolioPath(portfolioId: string, searchParams: URLSearchParams
 
 /**
  * Invested capital for the portfolio header.
- * Trading: prefer plan baseline (effective broker positions + MoneyRub);
+ * Trading: prefer plan baseline (episode capital from attach date — same as performance.funded_rub);
  * persisted portfolio.invested_capital_rub can be 0 when holdings are only on the account.
  */
 export function portfolioInvestedCapitalRub(

@@ -438,6 +438,11 @@ export interface CashflowEventView {
 }
 
 export interface PerformanceData {
+  total_value_rub: number;
+  net_profit_rub: number;
+  funded_rub: number;
+  annual_yield_pct: number | null;
+  /** @deprecated wire-compat alias of annual_yield_pct */
   xirr_pct: number | null;
   coupons_received_rub: number;
   tax_paid_rub: number;

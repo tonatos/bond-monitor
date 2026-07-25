@@ -211,7 +211,7 @@ export function PortfolioPage() {
                   </div>
                   <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
                     {isTrading ? (
-                      <Tooltip content="Вложенный капитал: стоимость позиций на счёте (по цене покупки) плюс свободный кэш брокера">
+                      <Tooltip content="Капитал эпизода с даты привязки к счёту: стоимость на старте (кэш + себестоимость бумаг) плюс пополнения минус выводы после привязки. Та же база, что для фактической прибыли">
                         <span className="cursor-help font-semibold text-foreground">
                           капитал{" "}
                           {formatRub(
@@ -431,11 +431,19 @@ export function PortfolioPage() {
             />
           )}
 
-          {planLoading && (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
+          {planLoading && !plan && (
+            <div className="space-y-3">
+              {isTrading && (
+                <div className="flex items-center justify-between gap-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-8 w-52" />
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+              </div>
             </div>
           )}
           {plan && (
@@ -448,6 +456,8 @@ export function PortfolioPage() {
                   ? tradingAdvice?.weighted_duration_years ?? plan.weighted_duration_years
                   : plan.weighted_duration_years
               }
+              performance={tradingAdvice?.performance}
+              moneyRub={tradingAdvice?.money_rub}
             />
           )}
 
