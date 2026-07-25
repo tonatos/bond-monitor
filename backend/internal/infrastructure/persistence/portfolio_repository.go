@@ -379,8 +379,10 @@ CREATE TABLE IF NOT EXISTS billing_ledger (
 INSERT INTO billing_plan_versions (
     id, catalog_group, code, period, amount_kopecks, features_json, effective_from, is_current
 ) VALUES
-('pro_month_v1','pro','pro_month','month',79500,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-01-01T00:00:00Z',1),
-('pro_year_v1','pro','pro_year','year',594000,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-01-01T00:00:00Z',1)
+('pro_month_v1','pro','pro_month_archived_v1','month',79500,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-01-01T00:00:00Z',0),
+('pro_year_v1','pro','pro_year_archived_v1','year',594000,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-01-01T00:00:00Z',0),
+('pro_month_v2','pro','pro_month','month',49500,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-07-25T00:00:00Z',1),
+('pro_year_v2','pro','pro_year','year',354000,'["broker_credentials.write","portfolio.attach","trading_portfolio.access"]','2026-07-25T00:00:00Z',1)
 ON CONFLICT (id) DO NOTHING
 `)
 	return err

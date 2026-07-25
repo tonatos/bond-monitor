@@ -55,7 +55,7 @@ smart-lab ──► infrastructure/ratings/ ──► SQLite bond_credit_ratings
 |--------|-----------|
 | Бесплатно | Скринер, симуляция, radar, избранное, calculator после Telegram-логина |
 | Платно (entitlements) | `broker_credentials.write`, `portfolio.attach`, `trading_portfolio.access` |
-| Тариф | Pro: 795 ₽/мес или 5940 ₽/год; версии в `billing_plan_versions` (grandfathering цены) |
+| Тариф | Pro: 495 ₽/мес или 3540 ₽/год (≈295 ₽/мес); версии в `billing_plan_versions` (grandfathering цены) |
 | Эквайринг | ЮKassa: по умолчанию prepaid one-time; рекуррент (`save_payment_method` + `RenewDue`) при `YOOKASSA_RECURRING=true`; без `YOOKASSA_*` — UI/каталог работают, checkout → `payment_unavailable` |
 | Complimentary | `COMPLIMENTARY_TELEGRAM_IDS` (пусто = никто) — полный доступ без платежей; задаётся только в `.env` / `deploy/inventory.yaml` |
 | UI | `/account` тариф (+ ROI), `/account/keys` ключи, `/account/notifications` Telegram-бот, `/account/finance` ledger; paywall-диалог на платных действиях |

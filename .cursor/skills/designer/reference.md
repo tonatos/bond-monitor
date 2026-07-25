@@ -74,7 +74,7 @@ From AGENTS.md:
 
 - Free after Telegram login: screener, simulation, radar, favorites, calculator
 - Paid entitlements: broker keys write, portfolio attach, trading_portfolio.access
-- Pro: 795 ₽/mo or 5940 ₽/yr (billing versions; UI may read catalog API)
+- Pro: 495 ₽/mo or 3540 ₽/yr (≈295 ₽/mo; billing versions; UI may read catalog API)
 - YooKassa; without env → `payment_unavailable`
 - Trade CTA: no sub → paywall; no keys → `/account`; else wizard
 

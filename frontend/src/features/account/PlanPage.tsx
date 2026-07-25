@@ -108,7 +108,7 @@ export function PlanPage() {
   const year = catalog?.plans.find((p) => p.period === "year");
   const keyRatePP = config?.key_rate;
   const excessPP = excessYieldPP(AUTO_PORTFOLIO_YIELD_PP, keyRatePP ?? 0);
-  const yearlyCost = year ? kopecksToRub(year.amount_kopecks) : 5940;
+  const yearlyCost = year ? kopecksToRub(year.amount_kopecks) : 3540;
   const annualExcess = useMemo(
     () => annualExcessRub(capitalRub, excessPP),
     [capitalRub, excessPP],

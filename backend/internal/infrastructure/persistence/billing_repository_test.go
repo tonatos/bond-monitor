@@ -33,7 +33,7 @@ func TestBillingRepository_SeedAndSubscription(t *testing.T) {
 	if err != nil || month == nil {
 		t.Fatalf("month plan: %v %#v", err, month)
 	}
-	if month.AmountKopecks != 79500 {
+	if month.AmountKopecks != 49500 {
 		t.Fatalf("month price %d", month.AmountKopecks)
 	}
 
@@ -47,7 +47,7 @@ func TestBillingRepository_SeedAndSubscription(t *testing.T) {
 	if err != nil || got == nil {
 		t.Fatalf("get: %v", err)
 	}
-	if got.ID != saved.ID || got.AmountKopecks != 79500 {
+	if got.ID != saved.ID || got.AmountKopecks != 49500 {
 		t.Fatalf("unexpected sub %#v", got)
 	}
 

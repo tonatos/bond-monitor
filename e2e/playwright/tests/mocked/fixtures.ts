@@ -77,7 +77,7 @@ export async function mockBillingStatus(
           ? {
               status: "active",
               period: "month",
-              amount_kopecks: 79500,
+              amount_kopecks: 49500,
               current_period_end: "2027-01-01T00:00:00Z",
               cancel_at_period_end: false,
               features: entitlements,
@@ -97,8 +97,8 @@ export async function mockBillingCatalog(page: Page): Promise<void> {
         plans: [
           {
             period: "month",
-            amount_kopecks: 79500,
-            monthly_kopecks: 79500,
+            amount_kopecks: 49500,
+            monthly_kopecks: 49500,
             savings_kopecks: 0,
             savings_percent: 0,
             features: [
@@ -106,20 +106,20 @@ export async function mockBillingCatalog(page: Page): Promise<void> {
               "portfolio.attach",
               "trading_portfolio.access",
             ],
-            plan_version_id: "pro_month_v1",
+            plan_version_id: "pro_month_v2",
           },
           {
             period: "year",
-            amount_kopecks: 594000,
-            monthly_kopecks: 49500,
-            savings_kopecks: 360000,
-            savings_percent: 37.73584905660377,
+            amount_kopecks: 354000,
+            monthly_kopecks: 29500,
+            savings_kopecks: 240000,
+            savings_percent: 40.4040404040404,
             features: [
               "broker_credentials.write",
               "portfolio.attach",
               "trading_portfolio.access",
             ],
-            plan_version_id: "pro_year_v1",
+            plan_version_id: "pro_year_v2",
           },
         ],
       },

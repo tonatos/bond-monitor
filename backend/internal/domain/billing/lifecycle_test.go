@@ -12,7 +12,7 @@ func TestApplySuccessfulPayment_RecurringSavesMethod(t *testing.T) {
 	plan := billing.PlanVersion{
 		ID:            "pro_month_v1",
 		Period:        billing.PeriodMonth,
-		AmountKopecks: 79500,
+		AmountKopecks: 49500,
 		Features:      billing.PaidFeaturesV1(),
 	}
 	sub := billing.ApplySuccessfulPayment(nil, plan, 10, "checkout", now, "pm_1", true)
@@ -32,7 +32,7 @@ func TestApplySuccessfulPayment_OneTimeNoAutoRenew(t *testing.T) {
 	plan := billing.PlanVersion{
 		ID:            "pro_month_v1",
 		Period:        billing.PeriodMonth,
-		AmountKopecks: 79500,
+		AmountKopecks: 49500,
 		Features:      billing.PaidFeaturesV1(),
 	}
 	// Even if provider returns a method id, one-time mode must not store it.

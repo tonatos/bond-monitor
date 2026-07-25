@@ -26,7 +26,7 @@ test.describe("Подписка — paywall", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("heading", { name: /Instrumenta Pro/i })).toBeVisible();
-    await expect(dialog.getByText(/795/)).toBeVisible();
+    await expect(dialog.getByText(/495/)).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Оплатить месяц/i })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Оплатить год/i })).toBeVisible();
   });
@@ -40,7 +40,7 @@ test.describe("Подписка — paywall", () => {
 
     await page.goto("/account");
     await expect(page.getByRole("heading", { name: "Instrumenta Pro" })).toBeVisible();
-    await expect(page.getByText(/795/)).toBeVisible();
+    await expect(page.getByText(/495/)).toBeVisible();
     await expect(page.getByRole("button", { name: /Оплатить месяц/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Когда подписка окупается" })).toBeVisible();
     await expect(page.getByText(/28[,.]46%/)).toBeVisible();
@@ -176,7 +176,7 @@ test.describe("Подписка — paywall", () => {
     await expect(
       dialog.getByRole("heading", { name: /Привязка счёта — в Instrumenta Pro/i }),
     ).toBeVisible();
-    await expect(dialog.getByText(/795/)).toBeVisible();
+    await expect(dialog.getByText(/495/)).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Оплатить месяц/i })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Оплатить год/i })).toBeVisible();
   });

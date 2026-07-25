@@ -175,7 +175,7 @@ func TestCheckout_OneTime_DoesNotSavePaymentMethod(t *testing.T) {
 				ID:              id,
 				Status:          "succeeded",
 				Paid:            true,
-				AmountKopecks:   79500,
+				AmountKopecks:   49500,
 				PaymentMethodID: "pm_should_ignore",
 				Metadata:        map[string]string{"owner_telegram_id": "11"},
 			}, nil
@@ -244,9 +244,9 @@ func TestRenewDue_OneTimeExpiresWithoutCharge(t *testing.T) {
 	_, err := repo.SaveSubscription(ctx, billing.Subscription{
 		OwnerTelegramID:    5,
 		Status:             billing.StatusActive,
-		PlanVersionID:      "pro_month_v1",
+		PlanVersionID:      "pro_month_v2",
 		Period:             billing.PeriodMonth,
-		AmountKopecks:      79500,
+		AmountKopecks:      49500,
 		Features:           billing.PaidFeaturesV1(),
 		CurrentPeriodStart: now.Add(-30 * 24 * time.Hour),
 		CurrentPeriodEnd:   now,

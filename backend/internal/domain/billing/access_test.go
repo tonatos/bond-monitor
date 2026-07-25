@@ -97,7 +97,7 @@ func TestApplySuccessfulPayment_GrandfatherOnRenew(t *testing.T) {
 	newPlan := PlanVersion{
 		ID:            "new",
 		Period:        PeriodMonth,
-		AmountKopecks: 79500,
+		AmountKopecks: 49500,
 		Features:      PaidFeaturesV1(),
 	}
 	out := ApplySuccessfulPayment(sub, newPlan, 1, "renew", now, "pm_1", true)
@@ -117,29 +117,29 @@ func TestApplySuccessfulPayment_ChangePeriodAdoptsNewPlan(t *testing.T) {
 	sub := &Subscription{
 		Status:        StatusActive,
 		Period:        PeriodMonth,
-		AmountKopecks: 79500,
+		AmountKopecks: 49500,
 		Features:      PaidFeaturesV1(),
 	}
 	year := PlanVersion{
 		ID:            "pro_year",
 		Period:        PeriodYear,
-		AmountKopecks: 594000,
+		AmountKopecks: 354000,
 		Features:      PaidFeaturesV1(),
 	}
 	out := ApplySuccessfulPayment(sub, year, 1, "change_period", now, "pm_2", true)
-	if out.Period != PeriodYear || out.AmountKopecks != 594000 {
+	if out.Period != PeriodYear || out.AmountKopecks != 354000 {
 		t.Fatalf("change_period must adopt yearly plan: %#v", out)
 	}
 }
 
 func TestYearlySavings(t *testing.T) {
-	// 795*12 = 9540; year 5940; savings 3600 ≈ 37.7%
-	s := YearlySavingsKopecks(79500, 594000)
-	if s != 360000 {
+	// 495*12 = 5940; year 3540; savings 2400 ≈ 40.4%
+	s := YearlySavingsKopecks(49500, 354000)
+	if s != 240000 {
 		t.Fatalf("savings kopecks: got %d", s)
 	}
-	pct := YearlySavingsPercent(79500, 594000)
-	if pct < 37.7 || pct > 37.8 {
+	pct := YearlySavingsPercent(49500, 354000)
+	if pct < 40.4 || pct > 40.5 {
 		t.Fatalf("savings percent: got %v", pct)
 	}
 }
