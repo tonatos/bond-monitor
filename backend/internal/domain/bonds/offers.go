@@ -105,7 +105,10 @@ func PutOfferAwarenessMessage(view BondOfferView) string {
 	execution := shared.FormatDate(&view.ExecutionDate)
 	switch view.WindowStatus {
 	case OfferWindowUnknown:
-		return fmt.Sprintf("Пут-оферта %s — окно подачи ещё не объявлено эмитентом", execution)
+		return fmt.Sprintf(
+			"Пут-оферта %s — по данным MOEX окно подачи ещё не объявлено, уточните у своего брокера",
+			execution,
+		)
 	case OfferWindowNotOpen:
 		if view.SubmissionStart != nil {
 			return fmt.Sprintf(

@@ -65,12 +65,10 @@ export function PortfolioValueChart({
   const data = useMemo(() => timeline, [timeline]);
 
   const growthPct = useMemo(() => {
-    if (data.length < 2) return null;
-    const start = data[0].total_value_rub;
+    if (data.length < 1 || initialAmount <= 0) return null;
     const end = data[data.length - 1].total_value_rub;
-    if (start <= 0) return null;
-    return ((end - start) / start) * 100;
-  }, [data]);
+    return ((end - initialAmount) / initialAmount) * 100;
+  }, [data, initialAmount]);
 
   if (data.length < 2) {
     return (

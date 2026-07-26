@@ -464,7 +464,7 @@ export function PortfolioPage() {
           {plan && plan.value_timeline.length > 0 && (
             <PortfolioValueChart
               timeline={plan.value_timeline}
-              initialAmount={active.initial_amount_rub}
+              initialAmount={portfolioInvestedCapitalRub(active, plan)}
               horizonDate={active.horizon_date}
             />
           )}

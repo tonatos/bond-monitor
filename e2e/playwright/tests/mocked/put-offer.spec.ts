@@ -78,7 +78,8 @@ test.describe("Пут-оферта", () => {
       figi: "FIGI_SAM",
       suggested_price_pct: 100.0,
       due_date: "2026-08-07",
-      reason: "Пут-оферта 07.08.2026 — окно подачи ещё не объявлено эмитентом",
+      reason:
+        "Пут-оферта 07.08.2026 — по данным MOEX окно подачи ещё не объявлено, уточните у своего брокера",
       urgency: "normal",
       offer_window_status: "unknown",
       submission_start: null,

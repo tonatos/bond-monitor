@@ -220,6 +220,8 @@ func avgCostPerUnit(ops []BrokerOperation, t0 time.Time, figis map[string]bool) 
 	return out
 }
 
+const fundingWaveMaxGapDays = 14
+
 func fundingAfterT0(ops []BrokerOperation, t0 time.Time) float64 {
 	total := 0.0
 	for _, op := range ops {
@@ -234,7 +236,59 @@ func fundingAfterT0(ops []BrokerOperation, t0 time.Time) float64 {
 	return total
 }
 
-// EpisodeCapital is the single owner of trading «капитал»: opening equity at T0 + net funding after T0.
+// fundingWaveBeforeT0 sums contiguous external funding ending at T0 (gap ≤ fundingWaveMaxGapDays).
+// Covers «пополнил, потом привязал портфель»: deposits on/before T0 that cost-basis opening may understate.
+func fundingWaveBeforeT0(ops []BrokerOperation, t0 time.Time) float64 {
+	if t0.IsZero() {
+		return 0
+	}
+	type funded struct {
+		date time.Time
+		pay  float64
+	}
+	var items []funded
+	for _, op := range ops {
+		if !isExecuted(op) || op.Date.After(t0) {
+			continue
+		}
+		if op.PaymentRub == nil || !isFundingOperationType(op.Type) {
+			continue
+		}
+		items = append(items, funded{date: op.Date, pay: float64(*op.PaymentRub)})
+	}
+	if len(items) == 0 {
+		return 0
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].date.Equal(items[j].date) {
+			return items[i].pay > items[j].pay
+		}
+		return items[i].date.After(items[j].date)
+	})
+	total := 0.0
+	cursor := t0
+	started := false
+	for _, it := range items {
+		if !started {
+			if shared.DaysBetween(it.date, t0) > fundingWaveMaxGapDays {
+				continue
+			}
+			started = true
+			total += it.pay
+			cursor = it.date
+			continue
+		}
+		if shared.DaysBetween(it.date, cursor) > fundingWaveMaxGapDays {
+			break
+		}
+		total += it.pay
+		cursor = it.date
+	}
+	return total
+}
+
+// EpisodeCapital is the single owner of trading «капитал».
+// base = max(opening equity at T0, contiguous funding wave ≤ T0) + net funding after T0.
 // Used by plan.invested_capital_rub (header / forecast «вложено») and performance.funded_rub.
 func EpisodeCapital(p portfolio.Portfolio, snapshot BrokerSnapshot, operations []BrokerOperation) shared.Rub {
 	t0 := EpisodeStart(p)
@@ -252,11 +306,15 @@ func EpisodeCapital(p portfolio.Portfolio, snapshot BrokerSnapshot, operations [
 		}
 		opening += float64(q) * avg[figi]
 	}
+	base := opening
 	delta := 0.0
 	if !t0.IsZero() {
+		if wave := fundingWaveBeforeT0(operations, t0); wave > base {
+			base = wave
+		}
 		delta = fundingAfterT0(operations, t0)
 	}
-	return shared.Rub(opening + delta)
+	return shared.Rub(base + delta)
 }
 
 func annualizeROI(profit, funded shared.Rub, daysElapsed int) *float64 {

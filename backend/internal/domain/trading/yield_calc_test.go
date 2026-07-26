@@ -95,6 +95,65 @@ func TestSummarizeActualPerformanceAA19EpisodeCapital(t *testing.T) {
 	}
 }
 
+// BondMonitor-exp: deposits 250k before evening attach; cost-basis opening understates — use funding wave.
+func TestEpisodeCapitalFundingWaveWhenAttachAfterDeposits(t *testing.T) {
+	asOf := shared.MustParseDate("2026-07-26")
+	t0 := "2026-07-08T20:27:55Z"
+	figi := "FIGI-A"
+	p := testutil.MakePortfolio(func(p *portfolio.Portfolio) {
+		p.CreatedAt = t0
+		p.TradingStartedAt = strPtr(t0)
+		p.Mode = portfolio.PortfolioModeTrading
+		p.Positions = []portfolio.PortfolioPosition{{
+			ISIN: "RU000A1", Name: "Bond", Lots: 220, LotSize: 1,
+			FaceValue: 1000, FIGI: &figi,
+		}}
+	})
+	// Cost-basis opening would be ~219k (cash 632 + bonds at discounted avg), not 250k.
+	snap := testutil.MakeAccountSnapshot(3_031.41, func(s *trading.BrokerSnapshot) {
+		pos := testutil.BondPosition(figi, 220, 220)
+		pos.CurrentPricePct = pricePct(100)
+		nkd := shared.Rub(0)
+		pos.CurrentNKDRub = &nkd
+		s.BondPositions[figi] = pos
+	})
+	ops := []trading.BrokerOperation{
+		{
+			Type: "OPERATION_TYPE_OUT_MULTI", State: "OPERATION_STATE_EXECUTED",
+			Date: shared.MustParseDate("2024-04-05"), PaymentRub: rubPtr(-380_000),
+		},
+		{
+			Type: "OPERATION_TYPE_INPUT", State: "OPERATION_STATE_EXECUTED",
+			Date: shared.MustParseDate("2026-07-07"), PaymentRub: rubPtr(180_000),
+		},
+		{
+			Type: "OPERATION_TYPE_INP_MULTI", State: "OPERATION_STATE_EXECUTED",
+			Date: shared.MustParseDate("2026-07-07"), PaymentRub: rubPtr(20_000),
+		},
+		{
+			Type: "OPERATION_TYPE_INPUT", State: "OPERATION_STATE_EXECUTED",
+			Date: shared.MustParseDate("2026-07-08"), PaymentRub: rubPtr(50_000),
+		},
+		{
+			Type: "OPERATION_TYPE_BUY", State: "OPERATION_STATE_EXECUTED", FIGI: figi,
+			Date: shared.MustParseDate("2026-07-07"), Quantity: 250, PaymentRub: rubPtr(-249_269),
+		},
+		{
+			Type: "OPERATION_TYPE_COUPON", State: "OPERATION_STATE_EXECUTED", FIGI: figi,
+			Date: shared.MustParseDate("2026-07-15"), PaymentRub: rubPtr(2_399.27),
+		},
+	}
+
+	capital := trading.EpisodeCapital(p, snap, ops)
+	if math.Abs(float64(capital)-250_000) > 0.01 {
+		t.Fatalf("capital: got %.2f want 250000 (funding wave, not understated cost basis)", capital)
+	}
+	perf := trading.SummarizeActualPerformance(p, snap, ops, asOf)
+	if perf.FundedRub != capital {
+		t.Fatalf("funded %.2f != EpisodeCapital %.2f", perf.FundedRub, capital)
+	}
+}
+
 // 2cd: attach to existing holdings; lifetime funding ignored; capital = opening at T0.
 func TestSummarizeActualPerformanceAttachExistingHoldings(t *testing.T) {
 	asOf := shared.MustParseDate("2026-07-25")
