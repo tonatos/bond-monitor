@@ -31,6 +31,7 @@ test.describe("Доходность — Результат", () => {
           net_profit_rub: 3_000,
           annual_yield_pct: 12.17,
           xirr_pct: 12.17,
+          as_of: "2026-07-26T12:00:00Z",
         }),
       }),
     });
@@ -47,7 +48,11 @@ test.describe("Доходность — Результат", () => {
     await expect(panel.getByText("Чистая прибыль")).toBeVisible();
     await expect(page.getByTestId("performance-net-profit")).toContainText("3");
     await expect(page.getByTestId("performance-net-profit")).toContainText("000");
-    await expect(page.getByTestId("performance-annual-yield")).toHaveText("12.17%");
+    // Main figure: after NDFL 13% → 12.17 * 0.87 = 10.59
+    await expect(page.getByTestId("performance-annual-yield")).toHaveText("10.59%");
+    const caption = page.getByTestId("performance-annual-yield-caption");
+    await expect(caption).toContainText("12.17% до НДФЛ");
+    await expect(caption).toContainText("на 26 июля");
     await expect(page.getByTestId("performance-total-value")).toContainText("103");
     await expect(page.getByTestId("performance-total-value")).toContainText("000");
   });

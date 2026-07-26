@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { api } from "@/api/client";
 import type { PerformanceData, PlanResponse } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { FieldHelp } from "@/components/ui/field-help";
@@ -217,10 +219,17 @@ function ResultPanel({
 }: {
   performance: PerformanceData | null | undefined;
 }) {
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: api.getConfig,
+    staleTime: 60_000,
+  });
+  const taxRatePct = config?.tax_rate ?? 13;
+
   const profitHelp =
     "Разница между текущей полной стоимостью портфеля (бумаги + кэш) и капиталом эпизода с даты привязки к счёту: стоимость на старте (кэш + себестоимость бумаг) плюс пополнения минус выводы после привязки. Та же цифра, что «капитал» в шапке. Купоны и переоценка входят через стоимость.";
   const yieldHelp =
-    "Годовая доходность: чистая прибыль относительно капитала эпизода, пересчитанная на год от даты привязки портфеля. Не XIRR; при сроке меньше 7 дней не показывается.";
+    "Годовая доходность после НДФЛ из настроек: прибыль относительно капитала эпизода, пересчитанная на год от даты привязки. В подписи — та же доходность до налога. Не XIRR; при сроке меньше 7 дней не показывается.";
   const valueHelp =
     "Полная текущая стоимость портфеля на счёте: рыночная оценка открытых позиций и свободный кэш вместе.";
 
@@ -230,7 +239,11 @@ function ResultPanel({
       performance.total_value_rub > 0 ||
       performance.net_profit_rub !== 0);
 
-  const annualYield = performance?.annual_yield_pct ?? performance?.xirr_pct ?? null;
+  const annualYieldBeforeTax = performance?.annual_yield_pct ?? performance?.xirr_pct ?? null;
+  const annualYieldAfterTax =
+    annualYieldBeforeTax == null
+      ? null
+      : annualYieldBeforeTax * (1 - Math.min(100, Math.max(0, taxRatePct)) / 100);
 
   return (
     <div className="space-y-3" data-testid="performance-metrics">
@@ -262,16 +275,18 @@ function ResultPanel({
         </MetricCard>
 
         <MetricCard label="Доходность" help={yieldHelp} helpLabel="Что значит фактическая доходность">
-          {annualYield != null ? (
+          {annualYieldAfterTax != null && annualYieldBeforeTax != null ? (
             <>
               <div data-testid="performance-annual-yield">
-                <PctValue value={annualYield} />
+                <PctValue value={annualYieldAfterTax} />
               </div>
-              {performance?.as_of && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  на {formatDate(performance.as_of)}
-                </p>
-              )}
+              <p
+                className="mt-1 text-xs text-muted-foreground"
+                data-testid="performance-annual-yield-caption"
+              >
+                {formatPct(annualYieldBeforeTax)} до НДФЛ
+                {performance?.as_of ? `, на ${formatDate(performance.as_of)}` : ""}
+              </p>
             </>
           ) : (
             <>
