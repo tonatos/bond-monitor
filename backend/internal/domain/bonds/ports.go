@@ -10,6 +10,10 @@ type MOEXClient interface {
 	FetchAllBondsUnfiltered() ([]BondRecord, error)
 	FetchBondBySecid(secid string) (*BondRecord, error)
 	FetchBondsByISINs(isins map[string]struct{}) ([]BondRecord, error)
+	// FetchHeldBondsByISINs loads bonds for existing portfolio positions without screener maturity cutoff.
+	FetchHeldBondsByISINs(isins map[string]struct{}) ([]BondRecord, error)
+	// FetchHeldBondBySecid loads one held bond by MOEX secid/ticker without screener maturity cutoff.
+	FetchHeldBondBySecid(secid string) (*BondRecord, error)
 	IsCacheFresh() bool
 	InvalidateCache()
 }

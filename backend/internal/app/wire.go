@@ -142,6 +142,7 @@ func Wire(ctx context.Context, settings config.Settings, logger *slog.Logger) (*
 		deployRepo,
 		notificationsRepo,
 		tokens,
+		bondInner,
 	)
 	portfolioInner := appportfolio.NewService(portfolioRepo, tradingInner.PlanUseCase())
 

@@ -249,6 +249,7 @@ func RunSimulation(
 	for i := range seedPositions {
 		if bond, ok := universeByISIN[seedPositions[i].ISIN]; ok {
 			SyncPutOfferFromBond(&seedPositions[i], bond)
+			SyncCouponFromBond(&seedPositions[i], bond)
 		}
 	}
 

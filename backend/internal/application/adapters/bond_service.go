@@ -85,6 +85,11 @@ func (s *BondService) GetCouponSchedule(ctx context.Context, figi string) ([]map
 	return out, nil
 }
 
+func (s *BondService) EnrichCouponValues(ctx context.Context, bonds []bonds.BondRecord, focusISINs []string) {
+	_ = ctx
+	s.inner.EnrichCouponValues(bonds, focusISINs)
+}
+
 func (s *BondService) RefreshRatings(ctx context.Context) (int, error) {
 	return s.inner.RefreshRatings(ctx)
 }

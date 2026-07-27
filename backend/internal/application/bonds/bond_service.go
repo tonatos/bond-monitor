@@ -2,6 +2,7 @@ package bonds
 
 import (
 	"context"
+	"time"
 
 	"github.com/tonatos/instrumenta/backend/internal/domain/bonds"
 	"github.com/tonatos/instrumenta/backend/internal/domain/portfolio"
@@ -178,7 +179,7 @@ func (s *Service) LoadByISINs(isins []string, policy portfolio.DurationPolicy, r
 		}
 	}
 	if len(missing) > 0 {
-		fetched, _ := s.moex.FetchBondsByISINs(missing)
+		fetched, _ := s.moex.FetchHeldBondsByISINs(missing)
 		scored := s.enrichFetchedBonds(fetched, keyRate, taxRate)
 		found = append(found, scored...)
 	}
@@ -220,6 +221,44 @@ func (s *Service) enrichFetchedBonds(bs []bonds.BondRecord, keyRate, taxRate flo
 
 func (s *Service) GetCouponSchedule(figi string) []bonds.CouponPayment {
 	return s.enricher.GetCouponSchedule(figi)
+}
+
+// EnrichCouponValues fills missing CouponValue from T-Invest schedule in-place.
+// When focusISINs is non-empty, only those ISINs are considered (required for full universe).
+// When focusISINs is empty, every bond in bs that needs enrichment is fetched (use for small lists).
+func (s *Service) EnrichCouponValues(bs []bonds.BondRecord, focusISINs []string) {
+	if s.enricher == nil || len(bs) == 0 {
+		return
+	}
+	var focus map[string]struct{}
+	if len(focusISINs) > 0 {
+		focus = make(map[string]struct{}, len(focusISINs))
+		for _, isin := range focusISINs {
+			if isin != "" {
+				focus[isin] = struct{}{}
+			}
+		}
+	}
+	today := time.Now()
+	cache := make(map[string]*float64)
+	for i := range bs {
+		b := &bs[i]
+		if focus != nil {
+			if _, ok := focus[b.ISIN]; !ok {
+				continue
+			}
+		}
+		if !bonds.NeedsCouponValueEnrichment(*b) {
+			continue
+		}
+		value, ok := cache[b.FIGI]
+		if !ok {
+			schedule := s.enricher.GetCouponSchedule(b.FIGI)
+			value = bonds.ResolveCouponValueFromSchedule(schedule, today)
+			cache[b.FIGI] = value
+		}
+		bonds.ApplyCouponValue(b, value)
+	}
 }
 
 func (s *Service) IsCacheFresh() bool {

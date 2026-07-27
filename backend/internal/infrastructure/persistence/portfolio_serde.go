@@ -48,6 +48,7 @@ type portfolioPositionJSON struct {
 	PurchaseDate             string   `json:"purchase_date"`
 	PurchaseAmountRub        float64  `json:"purchase_amount_rub"`
 	CouponRate               *float64 `json:"coupon_rate"`
+	CouponValue              *float64 `json:"coupon_value"`
 	FaceValue                float64  `json:"face_value"`
 	MaturityDate             *string  `json:"maturity_date"`
 	OfferDate                *string  `json:"offer_date"`
@@ -177,7 +178,7 @@ func positionToJSON(p portfolio.PortfolioPosition) portfolioPositionJSON {
 		ISIN: p.ISIN, Secid: p.Secid, Name: p.Name, Lots: p.Lots, LotSize: p.LotSize,
 		PurchaseCleanPricePct: p.PurchaseCleanPricePct, PurchaseDirtyPriceRub: p.PurchaseDirtyPriceRub,
 		PurchaseACIRub: p.PurchaseACIRub, PurchaseDate: p.PurchaseDate.Format("2006-01-02"),
-		PurchaseAmountRub: p.PurchaseAmountRub, CouponRate: p.CouponRate, FaceValue: p.FaceValue,
+		PurchaseAmountRub: p.PurchaseAmountRub, CouponRate: p.CouponRate, CouponValue: p.CouponValue, FaceValue: p.FaceValue,
 		MaturityDate: datePtrToStr(p.MaturityDate), OfferDate: datePtrToStr(p.OfferDate),
 		OfferSubmissionStart: datePtrToStr(p.OfferSubmissionStart),
 		OfferSubmissionEnd:   datePtrToStr(p.OfferSubmissionEnd),
@@ -193,7 +194,7 @@ func positionFromJSON(j portfolioPositionJSON) portfolio.PortfolioPosition {
 		ISIN: j.ISIN, Secid: j.Secid, Name: j.Name, Lots: j.Lots, LotSize: j.LotSize,
 		PurchaseCleanPricePct: j.PurchaseCleanPricePct, PurchaseDirtyPriceRub: j.PurchaseDirtyPriceRub,
 		PurchaseACIRub: j.PurchaseACIRub, PurchaseDate: parseDate(j.PurchaseDate),
-		PurchaseAmountRub: j.PurchaseAmountRub, CouponRate: j.CouponRate, FaceValue: j.FaceValue,
+		PurchaseAmountRub: j.PurchaseAmountRub, CouponRate: j.CouponRate, CouponValue: j.CouponValue, FaceValue: j.FaceValue,
 		MaturityDate: strToDatePtr(j.MaturityDate), OfferDate: strToDatePtr(j.OfferDate),
 		OfferSubmissionStart: strToDatePtr(j.OfferSubmissionStart),
 		OfferSubmissionEnd:   strToDatePtr(j.OfferSubmissionEnd),

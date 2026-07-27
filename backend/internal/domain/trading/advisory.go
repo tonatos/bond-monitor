@@ -47,6 +47,16 @@ func universeByFIGI(universe []bonds.BondRecord) map[string]bonds.BondRecord {
 	return result
 }
 
+func universeBySecid(universe []bonds.BondRecord) map[string]bonds.BondRecord {
+	result := make(map[string]bonds.BondRecord)
+	for _, bond := range universe {
+		if bond.Secid != "" {
+			result[bond.Secid] = bond
+		}
+	}
+	return result
+}
+
 func universeByISIN(universe []bonds.BondRecord) map[string]bonds.BondRecord {
 	result := make(map[string]bonds.BondRecord, len(universe))
 	for _, bond := range universe {
@@ -77,12 +87,16 @@ func holdingMarketValue(
 // BuildHoldings assembles holdings from broker snapshot and market universe.
 func BuildHoldings(snapshot BrokerSnapshot, universe []bonds.BondRecord) []HoldingView {
 	byFIGI := universeByFIGI(universe)
+	bySecid := universeBySecid(universe)
 	var holdings []HoldingView
 	for figi, pos := range snapshot.BondPositions {
 		if pos.Lots <= 0 {
 			continue
 		}
 		bond, ok := byFIGI[figi]
+		if !ok && pos.Ticker != "" {
+			bond, ok = bySecid[pos.Ticker]
+		}
 		name := pos.Ticker
 		isin := ""
 		lotSize := max(1, pos.Quantity/max(1, pos.Lots))
@@ -172,6 +186,7 @@ func HoldingsToPositions(
 		position := portfolio.PositionFromBond(bond, holding.Lots, purchaseDate, portfolio.PositionSourceAdopted)
 		position.FIGI = &holding.FIGI
 		portfolio.SyncPutOfferFromBond(&position, bond)
+		portfolio.SyncCouponFromBond(&position, bond)
 		if avg, ok := averagePricePctByFIGI[holding.FIGI]; ok {
 			applyAveragePurchasePrice(&position, avg)
 		}

@@ -19,6 +19,7 @@ const (
 	bondsCacheTTLSeconds     = 15 * 60
 	metadataCacheTTLSeconds  = 7 * 24 * 60 * 60
 	couponScheduleDaysAhead  = 365
+	couponScheduleDaysBack   = 365
 )
 
 type tinvestBondData struct {
@@ -418,8 +419,8 @@ func fetchCouponSchedule(ctx context.Context, api *investAPI, figi string) []bon
 	if err != nil {
 		return nil
 	}
-	from := time.Now().UTC()
-	to := from.Add(couponScheduleDaysAhead * 24 * time.Hour)
+	from := time.Now().UTC().Add(-couponScheduleDaysBack * 24 * time.Hour)
+	to := time.Now().UTC().Add(couponScheduleDaysAhead * 24 * time.Hour)
 	resp, err := client.NewInstrumentsServiceClient().GetBondCoupons(figi, from, to)
 	if err != nil {
 		packageLogger.Debug("get_bond_coupons failed", "figi", figi, "error", err)

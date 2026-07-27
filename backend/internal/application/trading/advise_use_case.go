@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tonatos/instrumenta/backend/internal/application"
+	appportfolio "github.com/tonatos/instrumenta/backend/internal/application/portfolio"
 	"github.com/tonatos/instrumenta/backend/internal/domain/bonds"
 	domainNotifications "github.com/tonatos/instrumenta/backend/internal/domain/notifications"
 	domainPortfolio "github.com/tonatos/instrumenta/backend/internal/domain/portfolio"
@@ -20,10 +21,12 @@ type AdviseUseCase struct {
 	deploySessions *DeploySessionUseCase
 	broker         *BrokerFacade
 	notifications  domainNotifications.Repository
+	coupons        appportfolio.CouponValueEnricher
+	bonds          UniverseAugmenter
 }
 
-func NewAdviseUseCase(ctx *Context, deploySessions *DeploySessionUseCase, broker *BrokerFacade, notifications domainNotifications.Repository) *AdviseUseCase {
-	return &AdviseUseCase{ctx: ctx, deploySessions: deploySessions, broker: broker, notifications: notifications}
+func NewAdviseUseCase(ctx *Context, deploySessions *DeploySessionUseCase, broker *BrokerFacade, notifications domainNotifications.Repository, coupons appportfolio.CouponValueEnricher, bonds UniverseAugmenter) *AdviseUseCase {
+	return &AdviseUseCase{ctx: ctx, deploySessions: deploySessions, broker: broker, notifications: notifications, coupons: coupons, bonds: bonds}
 }
 
 func (u *AdviseUseCase) GetAdvice(ctx context.Context, portfolioID string, universe []bonds.BondRecord, keyRate, taxRate float64, today time.Time, durationPolicy *domainPortfolio.DurationPolicy) (application.TradingAdviceResult, error) {
@@ -45,11 +48,14 @@ func (u *AdviseUseCase) GetAdvice(ctx context.Context, portfolioID string, unive
 	if err != nil {
 		return application.TradingAdviceResult{}, err
 	}
+	brokerSnapshot := tinvest.ToBrokerSnapshot(snapshot)
+	universe = augmentUniverseForSnapshot(u.bonds, universe, brokerSnapshot, keyRate, taxRate)
 	return u.BuildAdviceResult(ctx, p, universe, snapshot, ops, orders, keyRate, taxRate, today, durationPolicy, nil)
 }
 
 func (u *AdviseUseCase) BuildAdviceResult(ctx context.Context, p domainPortfolio.Portfolio, universe []bonds.BondRecord, snapshot trading.InfraAccountSnapshot, operations []trading.InfraOperationRecord, activeOrders []trading.InfraOrderState, keyRate, taxRate float64, today time.Time, durationPolicy *domainPortfolio.DurationPolicy, planSlots []domainPortfolio.ReinvestmentSlot) (application.TradingAdviceResult, error) {
 	brokerSnapshot := tinvest.ToBrokerSnapshot(snapshot)
+	u.enrichCouponsForAdvice(p, brokerSnapshot, universe)
 	policy := durationPolicyOrDefault(p, durationPolicy)
 	var activeSession *trading.DeploySession
 	if u.deploySessions != nil {
@@ -98,6 +104,34 @@ func (u *AdviseUseCase) BuildAdviceResult(ctx context.Context, p domainPortfolio
 		DeploySession:         deploySession,
 		CanPlaceOrders:        canPlace,
 	}, nil
+}
+
+func (u *AdviseUseCase) enrichCouponsForAdvice(p domainPortfolio.Portfolio, snapshot trading.BrokerSnapshot, universe []bonds.BondRecord) {
+	if u.coupons == nil || len(universe) == 0 {
+		return
+	}
+	seen := make(map[string]struct{})
+	focus := make([]string, 0, len(p.Positions)+8)
+	add := func(isin string) {
+		if isin == "" {
+			return
+		}
+		if _, ok := seen[isin]; ok {
+			return
+		}
+		seen[isin] = struct{}{}
+		focus = append(focus, isin)
+	}
+	for _, pos := range p.Positions {
+		add(pos.ISIN)
+	}
+	for _, h := range trading.BuildHoldings(snapshot, universe) {
+		add(h.ISIN)
+	}
+	if len(focus) == 0 {
+		return
+	}
+	u.coupons.EnrichCouponValues(universe, focus)
 }
 
 func turboEntrySuggestionsFromNotifications(portfolioID string, recs []domainNotifications.NotificationRecord) []trading.Suggestion {

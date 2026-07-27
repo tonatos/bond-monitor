@@ -71,6 +71,7 @@ type PortfolioPosition struct {
 	PurchaseDate             time.Time
 	PurchaseAmountRub        float64
 	CouponRate               *float64
+	CouponValue              *float64
 	FaceValue                float64
 	MaturityDate             *time.Time
 	OfferDate                *time.Time

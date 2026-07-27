@@ -7,6 +7,7 @@ import (
 
 	"github.com/tonatos/instrumenta/backend/internal/application"
 	"github.com/tonatos/instrumenta/backend/internal/domain/bonds"
+	appbonds "github.com/tonatos/instrumenta/backend/internal/application/bonds"
 	appportfolio "github.com/tonatos/instrumenta/backend/internal/application/portfolio"
 	domainNotifications "github.com/tonatos/instrumenta/backend/internal/domain/notifications"
 	domainPortfolio "github.com/tonatos/instrumenta/backend/internal/domain/portfolio"
@@ -32,19 +33,20 @@ func NewService(
 	deployRepo trading.DeploySessionRepository,
 	notificationsRepo domainNotifications.Repository,
 	tokens TokenSource,
+	bondSvc *appbonds.Service,
 ) *Service {
 	ctx := NewContext(repo, tokens)
 	broker := NewBrokerFacade(tokens)
 	policy := trading.DefaultDeploySessionPolicy()
-	planUC := NewPlanUseCase(repo, broker)
-	deploySessions := NewDeploySessionUseCase(ctx, deployRepo, broker, policy)
-	advise := NewAdviseUseCase(ctx, deploySessions, broker, notificationsRepo)
+	planUC := NewPlanUseCase(repo, broker, bondSvc)
+	deploySessions := NewDeploySessionUseCase(ctx, deployRepo, broker, policy, bondSvc)
+	advise := NewAdviseUseCase(ctx, deploySessions, broker, notificationsRepo, bondSvc, bondSvc)
 	return &Service{
 		ctx:            ctx,
 		sandbox:        NewSandboxUseCase(ctx, broker),
-		attach:         NewAttachUseCase(ctx, broker, planUC),
+		attach:         NewAttachUseCase(ctx, broker, planUC, bondSvc),
 		advise:         advise,
-		tradingState:   NewTradingStateUseCase(ctx, advise, broker, planUC),
+		tradingState:   NewTradingStateUseCase(ctx, advise, broker, planUC, bondSvc),
 		deploySessions: deploySessions,
 		orders:         NewOrderUseCase(ctx, broker, deploySessions),
 		sell:           NewSellPositionUseCase(ctx, broker),

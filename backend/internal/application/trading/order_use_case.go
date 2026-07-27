@@ -158,10 +158,11 @@ type AttachUseCase struct {
 	ctx    *Context
 	broker *BrokerFacade
 	plans  *appportfolio.PlanUseCase
+	bonds  UniverseAugmenter
 }
 
-func NewAttachUseCase(ctx *Context, broker *BrokerFacade, plans *appportfolio.PlanUseCase) *AttachUseCase {
-	return &AttachUseCase{ctx: ctx, broker: broker, plans: plans}
+func NewAttachUseCase(ctx *Context, broker *BrokerFacade, plans *appportfolio.PlanUseCase, bonds UniverseAugmenter) *AttachUseCase {
+	return &AttachUseCase{ctx: ctx, broker: broker, plans: plans, bonds: bonds}
 }
 
 func (u *AttachUseCase) GetAccountPreview(ctx context.Context, portfolioID, accountID string, kind trading.AccountKind, universe []bonds.BondRecord) (map[string]any, error) {
@@ -212,6 +213,7 @@ func (u *AttachUseCase) AttachAccount(ctx context.Context, portfolioID, accountI
 		return domainPortfolio.Portfolio{}, err
 	}
 	brokerSnapshot := tinvest.ToBrokerSnapshot(snapshot)
+	universe = augmentUniverseForSnapshot(u.bonds, universe, brokerSnapshot, keyRate, taxRate)
 	_ = trading.ValidateAttachSoft(brokerSnapshot, *p, universe)
 	for i := range p.Positions {
 		if p.Positions[i].FIGI == nil || *p.Positions[i].FIGI == "" {

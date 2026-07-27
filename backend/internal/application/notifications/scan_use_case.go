@@ -133,6 +133,7 @@ func (s *ScanUseCase) scanPortfolio(ctx context.Context, p domainPortfolio.Portf
 	}
 	keyRatePP, taxFrac := s.ratesForOwner(ctx, p.OwnerTelegramID)
 	universeAll := s.bondSvc.LoadUniverse(keyRatePP, taxFrac).Bonds
+	universeAll = s.bondSvc.AugmentUniverseForBrokerSnapshot(universeAll, brokerSnapshot, keyRatePP, taxFrac)
 	universeAllByISIN := make(map[string]bonds.BondRecord, len(universeAll))
 	for _, b := range universeAll {
 		universeAllByISIN[b.ISIN] = b

@@ -44,7 +44,7 @@ func TestBuildBondRecord_AppliesMOEXOfferWindow(t *testing.T) {
 	offers := []bonds.OfferWindowData{{
 		OfferDate: &od, SubmissionStart: &start, SubmissionEnd: &end, PricePct: &price,
 	}}
-	bond := buildBondRecord("RU000A10AS28", raw, today, nil, offers)
+	bond := buildBondRecord("RU000A10AS28", raw, today, nil, offers, bondBuildScreener)
 	if bond == nil {
 		t.Fatal("bond is nil")
 	}
@@ -69,7 +69,7 @@ func TestBuildBondRecord_SamoletPriceWithoutWindow(t *testing.T) {
 	od := time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC)
 	price := 100.0
 	offers := []bonds.OfferWindowData{{OfferDate: &od, PricePct: &price}}
-	bond := buildBondRecord("RU000A109874", raw, today, nil, offers)
+	bond := buildBondRecord("RU000A109874", raw, today, nil, offers, bondBuildScreener)
 	if bond == nil {
 		t.Fatal("bond is nil")
 	}

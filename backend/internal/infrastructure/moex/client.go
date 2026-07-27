@@ -56,7 +56,7 @@ func (c *Client) FetchAllBondsUnfiltered() ([]bonds.BondRecord, error) {
 	}
 	var result []bonds.BondRecord
 	for isin, raw := range bundle.Bonds {
-		if bond := buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin]); bond != nil {
+		if bond := buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin], bondBuildScreener); bond != nil {
 			result = append(result, *bond)
 		}
 	}
@@ -64,6 +64,14 @@ func (c *Client) FetchAllBondsUnfiltered() ([]bonds.BondRecord, error) {
 }
 
 func (c *Client) FetchBondBySecid(secid string) (*bonds.BondRecord, error) {
+	return c.fetchBondBySecid(secid, bondBuildScreener)
+}
+
+func (c *Client) FetchHeldBondBySecid(secid string) (*bonds.BondRecord, error) {
+	return c.fetchBondBySecid(secid, bondBuildHeld)
+}
+
+func (c *Client) fetchBondBySecid(secid string, mode bondBuildMode) (*bonds.BondRecord, error) {
 	if secid == "" {
 		return nil, nil
 	}
@@ -74,13 +82,21 @@ func (c *Client) FetchBondBySecid(secid string) (*bonds.BondRecord, error) {
 	}
 	for isin, raw := range bundle.Bonds {
 		if v, _ := raw["SECID"].(string); v == secid {
-			return buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin]), nil
+			return buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin], mode), nil
 		}
 	}
 	return nil, nil
 }
 
 func (c *Client) FetchBondsByISINs(isins map[string]struct{}) ([]bonds.BondRecord, error) {
+	return c.fetchBondsByISINs(isins, bondBuildScreener)
+}
+
+func (c *Client) FetchHeldBondsByISINs(isins map[string]struct{}) ([]bonds.BondRecord, error) {
+	return c.fetchBondsByISINs(isins, bondBuildHeld)
+}
+
+func (c *Client) fetchBondsByISINs(isins map[string]struct{}, mode bondBuildMode) ([]bonds.BondRecord, error) {
 	if len(isins) == 0 {
 		return nil, nil
 	}
@@ -95,7 +111,7 @@ func (c *Client) FetchBondsByISINs(isins map[string]struct{}) ([]bonds.BondRecor
 		if !ok {
 			continue
 		}
-		if bond := buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin]); bond != nil {
+		if bond := buildBondRecord(isin, raw, today, prevVolumePtr(bundle.PrevVolumes[isin]), bundle.Offers[isin], mode); bond != nil {
 			result = append(result, *bond)
 		}
 	}
@@ -338,12 +354,20 @@ func mergeRows(secs, mdata []map[string]any) map[string]map[string]any {
 	return byISIN
 }
 
+type bondBuildMode int
+
+const (
+	bondBuildScreener bondBuildMode = iota
+	bondBuildHeld
+)
+
 func buildBondRecord(
 	isin string,
 	raw map[string]any,
 	today time.Time,
 	prevVolume *float64,
 	offers []bonds.OfferWindowData,
+	mode bondBuildMode,
 ) *bonds.BondRecord {
 	if faceUnit, _ := raw["FACEUNIT"].(string); faceUnit != "" && faceUnit != "SUR" {
 		return nil
@@ -351,14 +375,17 @@ func buildBondRecord(
 	maturity := parseDate(raw["MATDATE"])
 	offer := parseDate(raw["OFFERDATE"])
 	var candidates []time.Time
-	if maturity != nil && !maturity.Before(today) {
+	if maturity != nil && (mode == bondBuildHeld || !maturity.Before(today)) {
 		candidates = append(candidates, *maturity)
 	}
-	if offer != nil && !offer.Before(today) {
+	if offer != nil && (mode == bondBuildHeld || !offer.Before(today)) {
 		candidates = append(candidates, *offer)
 	}
 	if len(candidates) == 0 {
-		return nil
+		if mode != bondBuildHeld || maturity == nil {
+			return nil
+		}
+		candidates = append(candidates, *maturity)
 	}
 	effective := candidates[0]
 	for _, d := range candidates[1:] {
@@ -367,7 +394,7 @@ func buildBondRecord(
 		}
 	}
 	days := int(effective.Sub(today).Hours() / 24)
-	if days <= 0 {
+	if mode == bondBuildScreener && days <= 0 {
 		return nil
 	}
 	ytm := pickYTM(raw["YIELDATWAP"], raw["YIELD"], raw["YIELDCLOSE"])

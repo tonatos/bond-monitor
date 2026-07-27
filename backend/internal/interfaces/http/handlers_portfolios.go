@@ -353,6 +353,7 @@ func (h *Handler) CalculatePortfolio(w http.ResponseWriter, r *http.Request) {
 		}
 		bondList = append(bondList, *bond)
 	}
+	h.deps.Bonds.EnrichCouponValues(ctx, bondList, nil)
 	hold := portfolio.CalculatePortfolioBudget(bondList, req.BudgetRub, today)
 	results := make([]map[string]any, 0, len(hold.Positions))
 	for _, p := range hold.Positions {

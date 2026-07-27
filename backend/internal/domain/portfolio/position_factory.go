@@ -45,6 +45,7 @@ func PositionFromBond(
 		PurchaseDate:          purchaseDate,
 		PurchaseAmountRub:     dirtyPerBond * float64(bondsCount),
 		CouponRate:            b.CouponRate,
+		CouponValue:           b.CouponValue,
 		FaceValue:             b.FaceValue,
 		MaturityDate:          b.MaturityDate,
 		OfferDate:             offerDate,
@@ -75,6 +76,26 @@ func SyncPutOfferFromBond(position *PortfolioPosition, b bonds.BondRecord) {
 	position.OfferPricePct = b.OfferPricePct
 	if prev == nil || !prev.Equal(*b.OfferDate) {
 		position.PutOfferDecision = bonds.PutOfferPending
+	}
+}
+
+// SyncCouponFromBond refreshes coupon payment fields from the live bond record.
+func SyncCouponFromBond(position *PortfolioPosition, b bonds.BondRecord) {
+	if b.CouponValue != nil && *b.CouponValue > 0 {
+		v := *b.CouponValue
+		position.CouponValue = &v
+	}
+	if b.CouponRate != nil && *b.CouponRate > 0 {
+		r := *b.CouponRate
+		position.CouponRate = &r
+	}
+	if b.CouponPeriodDays != nil && *b.CouponPeriodDays > 0 {
+		p := *b.CouponPeriodDays
+		position.CouponPeriodDays = &p
+	}
+	if b.NextCouponDate != nil {
+		d := *b.NextCouponDate
+		position.NextCouponDate = &d
 	}
 }
 

@@ -46,10 +46,11 @@ type DeploySessionUseCase struct {
 	repo   trading.DeploySessionRepository
 	broker *BrokerFacade
 	policy trading.DeploySessionPolicy
+	bonds  UniverseAugmenter
 }
 
-func NewDeploySessionUseCase(ctx *Context, repo trading.DeploySessionRepository, broker *BrokerFacade, policy trading.DeploySessionPolicy) *DeploySessionUseCase {
-	return &DeploySessionUseCase{ctx: ctx, repo: repo, broker: broker, policy: policy}
+func NewDeploySessionUseCase(ctx *Context, repo trading.DeploySessionRepository, broker *BrokerFacade, policy trading.DeploySessionPolicy, bonds UniverseAugmenter) *DeploySessionUseCase {
+	return &DeploySessionUseCase{ctx: ctx, repo: repo, broker: broker, policy: policy, bonds: bonds}
 }
 
 func (u *DeploySessionUseCase) GetActive(ctx context.Context, portfolioID string) (*trading.DeploySession, error) {
@@ -115,6 +116,7 @@ func (u *DeploySessionUseCase) buildAndSave(ctx context.Context, portfolioID str
 		return trading.DeploySession{}, err
 	}
 	brokerSnapshot := tinvest.ToBrokerSnapshot(snapshot)
+	universe = augmentUniverseForSnapshot(u.bonds, universe, brokerSnapshot, keyRate, taxRate)
 	holdings := trading.BuildHoldings(brokerSnapshot, universe)
 	positions := trading.EffectiveTradingPositions(p, brokerSnapshot, universe, today)
 	durationPolicy := domainPortfolio.DurationPolicyForPortfolio(p, domainPortfolio.RateScenarioHold)

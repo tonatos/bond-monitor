@@ -6,12 +6,19 @@ import (
 	"github.com/tonatos/instrumenta/backend/internal/domain/shared"
 )
 
+func hasCouponPaymentBasis(position PortfolioPosition) bool {
+	if position.CouponValue != nil && *position.CouponValue > 0 {
+		return true
+	}
+	return position.CouponRate != nil && *position.CouponRate > 0
+}
+
 // CouponDatesInRange returns coupon payment dates in (purchase_date, end_date].
 func CouponDatesInRange(position PortfolioPosition, endDate time.Time) []time.Time {
 	if position.CouponPeriodDays == nil || *position.CouponPeriodDays <= 0 {
 		return nil
 	}
-	if position.CouponRate == nil || *position.CouponRate <= 0 {
+	if !hasCouponPaymentBasis(position) {
 		return nil
 	}
 	period := *position.CouponPeriodDays
@@ -35,6 +42,9 @@ func CouponDatesInRange(position PortfolioPosition, endDate time.Time) []time.Ti
 
 // CouponPaymentPerEvent returns gross coupon payment per event in RUB.
 func CouponPaymentPerEvent(position PortfolioPosition) float64 {
+	if position.CouponValue != nil && *position.CouponValue > 0 {
+		return *position.CouponValue * float64(position.BondsCount())
+	}
 	if position.CouponRate == nil || position.CouponPeriodDays == nil {
 		return 0
 	}

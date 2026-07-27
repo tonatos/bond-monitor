@@ -31,6 +31,7 @@ type BondService interface {
 	LoadBySecid(ctx context.Context, secid string, riskProfile portfolio.RiskProfile, rateScenario string) (*bonds.BondRecord, error)
 	LoadByISINs(ctx context.Context, isins []string, riskProfile portfolio.RiskProfile, rateScenario string) ([]bonds.BondRecord, error)
 	GetCouponSchedule(ctx context.Context, figi string) ([]map[string]any, error)
+	EnrichCouponValues(ctx context.Context, bonds []bonds.BondRecord, focusISINs []string)
 	RefreshRatings(ctx context.Context) (int, error)
 	InvalidateCaches(ctx context.Context) error
 }

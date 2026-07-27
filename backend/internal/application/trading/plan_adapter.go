@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	appbonds "github.com/tonatos/instrumenta/backend/internal/application/bonds"
+	appportfolio "github.com/tonatos/instrumenta/backend/internal/application/portfolio"
 	domainPortfolio "github.com/tonatos/instrumenta/backend/internal/domain/portfolio"
 	"github.com/tonatos/instrumenta/backend/internal/domain/trading"
-	appportfolio "github.com/tonatos/instrumenta/backend/internal/application/portfolio"
 	"github.com/tonatos/instrumenta/backend/internal/infrastructure/tinvest"
 )
 
@@ -39,6 +40,6 @@ func (a *BrokerPlanAdapter) GetTradingSnapshot(ctx context.Context, p domainPort
 }
 
 // NewPlanUseCase wires the unified plan builder with broker access.
-func NewPlanUseCase(repo domainPortfolio.Repository, broker *BrokerFacade) *appportfolio.PlanUseCase {
-	return appportfolio.NewPlanUseCase(repo, NewBrokerPlanAdapter(broker))
+func NewPlanUseCase(repo domainPortfolio.Repository, broker *BrokerFacade, bondSvc *appbonds.Service) *appportfolio.PlanUseCase {
+	return appportfolio.NewPlanUseCase(repo, NewBrokerPlanAdapter(broker), bondSvc, bondSvc)
 }

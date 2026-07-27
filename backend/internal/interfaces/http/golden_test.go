@@ -343,6 +343,7 @@ func (m mockBondService) LoadByISINs(context.Context, []string, portfolio.RiskPr
 func (m mockBondService) GetCouponSchedule(context.Context, string) ([]map[string]any, error) {
 	return nil, nil
 }
+func (m mockBondService) EnrichCouponValues(context.Context, []bonds.BondRecord, []string) {}
 func (m mockBondService) RefreshRatings(context.Context) (int, error) { return 0, nil }
 func (m mockBondService) InvalidateCaches(context.Context) error      { return nil }
 

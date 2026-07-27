@@ -15,14 +15,15 @@ const operationsLookbackDays = 365 * 5
 
 // TradingStateUseCase returns combined trading plan + advice.
 type TradingStateUseCase struct {
-	ctx    *Context
-	advise *AdviseUseCase
-	broker *BrokerFacade
-	plans  *appportfolio.PlanUseCase
+	ctx     *Context
+	advise  *AdviseUseCase
+	broker  *BrokerFacade
+	plans   *appportfolio.PlanUseCase
+	bonds   UniverseAugmenter
 }
 
-func NewTradingStateUseCase(ctx *Context, advise *AdviseUseCase, broker *BrokerFacade, plans *appportfolio.PlanUseCase) *TradingStateUseCase {
-	return &TradingStateUseCase{ctx: ctx, advise: advise, broker: broker, plans: plans}
+func NewTradingStateUseCase(ctx *Context, advise *AdviseUseCase, broker *BrokerFacade, plans *appportfolio.PlanUseCase, bonds UniverseAugmenter) *TradingStateUseCase {
+	return &TradingStateUseCase{ctx: ctx, advise: advise, broker: broker, plans: plans, bonds: bonds}
 }
 
 func (u *TradingStateUseCase) GetTradingState(ctx context.Context, portfolioID string, universe []bonds.BondRecord, keyRate, taxRate float64, today time.Time, durationPolicy *domainPortfolio.DurationPolicy) (application.TradingStateResult, error) {
@@ -47,6 +48,7 @@ func (u *TradingStateUseCase) GetTradingState(ctx context.Context, portfolioID s
 	brokerSnapshot := tinvest.ToBrokerSnapshot(snapshot)
 	brokerOps := tinvest.ToBrokerOperations(ops)
 	policy := durationPolicyOrDefault(p, durationPolicy)
+	universe = augmentUniverseForSnapshot(u.bonds, universe, brokerSnapshot, keyRate, taxRate)
 	plan := u.plans.BuildForTrading(p, brokerSnapshot, brokerOps, universe, today, keyRate, taxRate, policy)
 	advice, err := u.advise.BuildAdviceResult(ctx, p, universe, snapshot, ops, orders, keyRate, taxRate, today, durationPolicy, plan.ResolvedSlots)
 	if err != nil {
