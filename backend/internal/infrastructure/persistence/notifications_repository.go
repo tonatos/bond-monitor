@@ -73,6 +73,30 @@ func (r *NotificationsRepository) ListForPortfolio(ctx context.Context, portfoli
 	return result, nil
 }
 
+func (r *NotificationsRepository) ListForOwner(ctx context.Context, ownerTelegramID int64) ([]notifications.NotificationRecord, error) {
+	const query = `
+		SELECT n.id, n.fingerprint, n.portfolio_id, p.name AS portfolio_name, n.kind, n.payload_json,
+		       n.urgency, n.created_at, n.read_at, n.dismissed_at
+		FROM user_notifications n
+		INNER JOIN portfolios p ON p.id = n.portfolio_id
+		WHERE p.owner_telegram_id = $1
+		  AND n.dismissed_at IS NULL
+		ORDER BY n.created_at DESC`
+	var rows []userNotificationRow
+	if err := r.db.SelectContext(ctx, &rows, query, ownerTelegramID); err != nil {
+		return nil, err
+	}
+	result := make([]notifications.NotificationRecord, 0, len(rows))
+	for _, row := range rows {
+		rec, err := notificationFromRow(row)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, rec)
+	}
+	return result, nil
+}
+
 func (r *NotificationsRepository) GetByID(ctx context.Context, notificationID string) (*notifications.NotificationRecord, error) {
 	var row userNotificationRow
 	err := r.db.GetContext(ctx, &row, `
@@ -127,6 +151,7 @@ func notificationFromRow(row userNotificationRow) (notifications.NotificationRec
 	}
 	rec := notifications.NotificationRecord{
 		ID: row.ID, Fingerprint: row.Fingerprint, PortfolioID: row.PortfolioID,
+		PortfolioName: row.PortfolioName,
 		Kind: row.Kind, Payload: payload, Urgency: row.Urgency,
 		CreatedAt: parseDBTime(row.CreatedAt),
 	}

@@ -535,6 +535,7 @@ export interface Notification {
   id: string;
   fingerprint: string;
   portfolio_id: string;
+  portfolio_name?: string;
   kind: NotificationKind;
   payload: Record<string, unknown>;
   urgency: SuggestionUrgency;
@@ -546,6 +547,7 @@ export interface Notification {
 
 export interface NotificationsListResponse {
   notifications: Notification[];
+  unread_count?: number;
 }
 
 export interface MarketRadarSectorRow {

@@ -129,3 +129,51 @@ func TestDeploySessionRepository(t *testing.T) {
 		t.Fatalf("has active: %v %v", err, has)
 	}
 }
+
+func TestNotificationsListForOwner(t *testing.T) {
+	db := openTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	portfolios := persistence.NewPortfolioRepository(db)
+	notifs := persistence.NewNotificationsRepository(db)
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	horizon := time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
+	_, err := portfolios.Save(ctx, portfolio.Portfolio{
+		ID: "pa", Name: "Alpha", CreatedAt: now, UpdatedAt: now, OwnerTelegramID: 10,
+		InitialAmountRub: 100_000, HorizonDate: horizon, RiskProfile: portfolio.RiskProfileNormal,
+		CashBalanceRub: 100_000, Mode: portfolio.PortfolioModeTrading,
+		RiskBaselines: map[string]portfolio.RiskSnapshot{},
+	})
+	if err != nil {
+		t.Fatalf("save pa: %v", err)
+	}
+	_, err = portfolios.Save(ctx, portfolio.Portfolio{
+		ID: "pb", Name: "Beta", CreatedAt: now, UpdatedAt: now, OwnerTelegramID: 20,
+		InitialAmountRub: 100_000, HorizonDate: horizon, RiskProfile: portfolio.RiskProfileNormal,
+		CashBalanceRub: 100_000, Mode: portfolio.PortfolioModeTrading,
+		RiskBaselines: map[string]portfolio.RiskSnapshot{},
+	})
+	if err != nil {
+		t.Fatalf("save pb: %v", err)
+	}
+
+	created := time.Now().UTC()
+	if _, err := notifs.UpsertFromBus(ctx, "fp-a", "pa", "risk_escalation", map[string]any{"name": "A"}, "critical", &created); err != nil {
+		t.Fatalf("upsert a: %v", err)
+	}
+	if _, err := notifs.UpsertFromBus(ctx, "fp-b", "pb", "risk_escalation", map[string]any{"name": "B"}, "critical", &created); err != nil {
+		t.Fatalf("upsert b: %v", err)
+	}
+
+	list, err := notifs.ListForOwner(ctx, 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 notification for owner 10, got %d", len(list))
+	}
+	if list[0].PortfolioName != "Alpha" {
+		t.Fatalf("expected portfolio name Alpha, got %q", list[0].PortfolioName)
+	}
+}

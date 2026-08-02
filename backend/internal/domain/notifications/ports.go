@@ -7,15 +7,16 @@ import (
 
 // NotificationRecord is the in-app notification read-model.
 type NotificationRecord struct {
-	ID          string
-	Fingerprint string
-	PortfolioID string
-	Kind        string
-	Payload     map[string]any
-	Urgency     string
-	CreatedAt   time.Time
-	ReadAt      *time.Time
-	DismissedAt *time.Time
+	ID            string
+	Fingerprint   string
+	PortfolioID   string
+	PortfolioName string
+	Kind          string
+	Payload       map[string]any
+	Urgency       string
+	CreatedAt     time.Time
+	ReadAt        *time.Time
+	DismissedAt   *time.Time
 }
 
 func (n NotificationRecord) IsUnread() bool {
@@ -26,6 +27,7 @@ func (n NotificationRecord) IsUnread() bool {
 type Repository interface {
 	UpsertFromBus(ctx context.Context, fingerprint, portfolioID, kind string, payload map[string]any, urgency string, createdAt *time.Time) (NotificationRecord, error)
 	ListForPortfolio(ctx context.Context, portfolioID string, unreadOnly bool) ([]NotificationRecord, error)
+	ListForOwner(ctx context.Context, ownerTelegramID int64) ([]NotificationRecord, error)
 	GetByID(ctx context.Context, notificationID string) (*NotificationRecord, error)
 	MarkRead(ctx context.Context, notificationID string) (*NotificationRecord, error)
 	Dismiss(ctx context.Context, notificationID string) (*NotificationRecord, error)

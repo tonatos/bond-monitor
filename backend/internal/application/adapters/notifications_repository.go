@@ -29,6 +29,27 @@ func (r *NotificationsRepository) ListForPortfolio(ctx context.Context, portfoli
 	return out, nil
 }
 
+func (r *NotificationsRepository) ListForOwner(ctx context.Context, ownerTelegramID int64) ([]application.NotificationRecord, error) {
+	records, err := r.inner.ListForOwner(ctx, ownerTelegramID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]application.NotificationRecord, 0, len(records))
+	for _, rec := range records {
+		out = append(out, toApplicationNotification(rec))
+	}
+	return out, nil
+}
+
+func (r *NotificationsRepository) GetByID(ctx context.Context, notificationID string) (*application.NotificationRecord, error) {
+	rec, err := r.inner.GetByID(ctx, notificationID)
+	if err != nil || rec == nil {
+		return nil, err
+	}
+	appRec := toApplicationNotification(*rec)
+	return &appRec, nil
+}
+
 func (r *NotificationsRepository) MarkRead(ctx context.Context, notificationID string) (*application.NotificationRecord, error) {
 	rec, err := r.inner.MarkRead(ctx, notificationID)
 	if err != nil || rec == nil {
@@ -49,16 +70,17 @@ func (r *NotificationsRepository) Dismiss(ctx context.Context, notificationID st
 
 func toApplicationNotification(rec domain.NotificationRecord) application.NotificationRecord {
 	return application.NotificationRecord{
-		ID:          rec.ID,
-		Fingerprint: rec.Fingerprint,
-		PortfolioID: rec.PortfolioID,
-		Kind:        rec.Kind,
-		Payload:     rec.Payload,
-		Urgency:     rec.Urgency,
-		CreatedAt:   rec.CreatedAt,
-		ReadAt:      rec.ReadAt,
-		DismissedAt: rec.DismissedAt,
-		IsUnread:    rec.IsUnread(),
+		ID:            rec.ID,
+		Fingerprint:   rec.Fingerprint,
+		PortfolioID:   rec.PortfolioID,
+		PortfolioName: rec.PortfolioName,
+		Kind:          rec.Kind,
+		Payload:       rec.Payload,
+		Urgency:       rec.Urgency,
+		CreatedAt:     rec.CreatedAt,
+		ReadAt:        rec.ReadAt,
+		DismissedAt:   rec.DismissedAt,
+		IsUnread:      rec.IsUnread(),
 	}
 }
 

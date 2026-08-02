@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -271,6 +272,7 @@ func (r SectorConcentrationRule) Evaluate(ctx AlertContext) []Alert {
 		return nil
 	}
 	exposures := portfolio.ExposureBySector(universeByISIN, lotsByISIN, totalValue)
+	var overweight []portfolio.Exposure
 	for _, e := range exposures {
 		if e.Key == "unknown" {
 			continue
@@ -278,24 +280,46 @@ func (r SectorConcentrationRule) Evaluate(ctx AlertContext) []Alert {
 		if e.Share <= maxShare {
 			continue
 		}
-		sectorLabel := e.Key
-		sharePct := e.Share * 100
-		alerts := []Alert{{
-			PortfolioID: ctx.Portfolio.ID,
-			Kind:        AlertKindSectorConcentration,
-			ISIN:        "sector:" + e.Key,
-			Name:        "Концентрация в секторе: " + sectorLabel,
-			Lots:        0,
-			Reason: fmt.Sprintf(
-				"Сектор «%s» занимает %.1f%% портфеля (лимит %.0f%%). Сигнал модели: концентрация выше лимита стратегии.",
-				sectorLabel, sharePct, maxShare*100,
-			),
-			Urgency:   AlertUrgencyNormal,
-			DetailKey: e.Key,
-		}}
-		return alerts
+		overweight = append(overweight, e)
 	}
-	return nil
+	if len(overweight) == 0 {
+		return nil
+	}
+
+	keys := make([]string, len(overweight))
+	parts := make([]string, len(overweight))
+	for i, e := range overweight {
+		keys[i] = e.Key
+		parts[i] = fmt.Sprintf("«%s» %.1f%%", e.Key, e.Share*100)
+	}
+	sort.Strings(keys)
+	detailKey := strings.Join(keys, ",")
+
+	reason := fmt.Sprintf(
+		"Секторы выше лимита %.0f%%: %s. Сигнал модели: концентрация выше лимита стратегии.",
+		maxShare*100, strings.Join(parts, ", "),
+	)
+	if len(overweight) == 1 {
+		reason = fmt.Sprintf(
+			"Сектор «%s» занимает %.1f%% портфеля (лимит %.0f%%). Сигнал модели: концентрация выше лимита стратегии.",
+			overweight[0].Key, overweight[0].Share*100, maxShare*100,
+		)
+	}
+
+	return []Alert{{
+		PortfolioID: ctx.Portfolio.ID,
+		Kind:        AlertKindSectorConcentration,
+		ISIN:        "sectors:overweight",
+		Name:        "Концентрация секторов",
+		Lots:        0,
+		Reason:      reason,
+		Urgency:     AlertUrgencyNormal,
+		DetailKey:   detailKey,
+		ExtraPayload: map[string]any{
+			"sectors": keys,
+			"limit":   maxShare,
+		},
+	}}
 }
 
 func strPtr(s string) *string {

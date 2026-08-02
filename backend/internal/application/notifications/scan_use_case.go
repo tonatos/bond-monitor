@@ -273,11 +273,12 @@ func (s *ScanUseCase) scanPortfolio(ctx context.Context, p domainPortfolio.Portf
 				})
 			}
 
-			// Temporal spread widening vs peers.
+			// Temporal spread widening vs peers (requires peer baseline).
 			if okNow && okPrev {
 				spreadChange := cur.CreditSpreadPP - prev.CreditSpreadPP
-				peerMedian := median(peerSpreadChanges)
-				if spreadChange-peerMedian >= 5.0 {
+				if _, peerMedian, widenOK := market_signals.IsSpreadWidening(
+					spreadChange, peerSpreadChanges, market_signals.DefaultSpreadWideningPolicy,
+				); widenOK {
 					temporalAlerts = append(temporalAlerts, domain.Alert{
 						PortfolioID: p.ID, Kind: domain.AlertKindSpreadWidening,
 						ISIN: h.ISIN, Name: h.Name, Lots: h.Lots, FIGI: bonds.StrPtr(h.FIGI),

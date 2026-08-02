@@ -1,25 +1,18 @@
 import { Activity } from "lucide-react";
 import type { Notification } from "@/api/types";
-import { NOTIFICATION_KIND_LABELS } from "@/features/portfolio/labels";
+import {
+  notificationKindLabel,
+  notificationTitle,
+  payloadPct,
+} from "@/features/notifications/notificationDisplay";
 import { usePortfolioNotifications } from "@/features/portfolio/marketSignals";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, formatPct } from "@/lib/utils";
-
-function title(n: Notification): string {
-  const name = n.payload?.name;
-  return typeof name === "string" && name.length > 0 ? name : "Сигнал";
-}
+import { cn } from "@/lib/utils";
 
 function reason(n: Notification): string {
   const r = n.payload?.reason;
   return typeof r === "string" ? r : "";
-}
-
-function maybePct(payload: Record<string, unknown>, key: string): string | null {
-  const v = payload[key];
-  if (typeof v !== "number" || !Number.isFinite(v)) return null;
-  return formatPct(v / 100);
 }
 
 export function SignalsPanel({ portfolioId }: { portfolioId: string }) {
@@ -64,10 +57,10 @@ export function SignalsPanel({ portfolioId }: { portfolioId: string }) {
 
       <div className="space-y-2">
         {signals.map((n) => {
-          const kindLabel = NOTIFICATION_KIND_LABELS[n.kind] ?? n.kind;
+          const kindLabel = notificationKindLabel(n);
           const payload = n.payload ?? {};
-          const bond7d = maybePct(payload, "bond_change_7d_pct");
-          const sector7d = maybePct(payload, "sector_change_7d_pct");
+          const bond7d = payloadPct(payload, "bond_change_7d_pct");
+          const sector7d = payloadPct(payload, "sector_change_7d_pct");
 
           return (
             <div
@@ -79,7 +72,7 @@ export function SignalsPanel({ portfolioId }: { portfolioId: string }) {
               )}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm font-medium">{title(n)}</p>
+                <p className="text-sm font-medium">{notificationTitle(n)}</p>
                 <Badge variant="outline" className="text-xs">
                   {kindLabel}
                 </Badge>

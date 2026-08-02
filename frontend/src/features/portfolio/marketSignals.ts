@@ -10,6 +10,12 @@ export const MARKET_SIGNAL_KINDS = new Set<NotificationKind>([
   "turbo_entry",
 ]);
 
+export const notificationsInboxQueryKey = ["notifications", "inbox"] as const;
+
+export function portfolioNotificationsQueryKey(portfolioId: string) {
+  return ["notifications", portfolioId] as const;
+}
+
 export function isMarketSignalKind(kind: string): boolean {
   return MARKET_SIGNAL_KINDS.has(kind as NotificationKind);
 }
@@ -20,18 +26,15 @@ export function isMarketSignal(notification: Notification): boolean {
 
 export function usePortfolioNotifications(portfolioId: string, enabled = true) {
   const query = useQuery({
-    queryKey: ["notifications", portfolioId],
-    queryFn: () => api.getNotifications(portfolioId),
+    queryKey: portfolioNotificationsQueryKey(portfolioId),
+    queryFn: () => api.getNotifications(portfolioId, true),
     refetchInterval: 60_000,
     enabled: enabled && portfolioId.length > 0,
   });
 
   const all = query.data?.notifications ?? [];
 
-  const signals = useMemo(
-    () => all.filter(isMarketSignal),
-    [all],
-  );
+  const signals = useMemo(() => all.filter(isMarketSignal), [all]);
 
   const notifications = useMemo(
     () => all.filter((n) => !isMarketSignal(n)),
@@ -56,4 +59,13 @@ export function usePortfolioNotifications(portfolioId: string, enabled = true) {
     unreadSignalsCount,
     unreadNotificationsCount,
   };
+}
+
+export function useNotificationsInbox(enabled = true) {
+  return useQuery({
+    queryKey: notificationsInboxQueryKey,
+    queryFn: () => api.getNotificationsInbox(),
+    refetchInterval: 60_000,
+    enabled,
+  });
 }

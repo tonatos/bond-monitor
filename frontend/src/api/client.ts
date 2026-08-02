@@ -375,6 +375,7 @@ export const api = {
     request<NotificationsListResponse>(
       `/portfolios/${id}/notifications${unreadOnly ? "?unread_only=true" : ""}`,
     ),
+  getNotificationsInbox: () => request<NotificationsListResponse>("/notifications"),
   markNotificationRead: (notificationId: string) =>
     request<void>(`/notifications/${encodeURIComponent(notificationId)}/read`, {
       method: "POST",

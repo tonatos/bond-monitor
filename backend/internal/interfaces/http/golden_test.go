@@ -213,6 +213,17 @@ func TestGoldenNotificationsList(t *testing.T) {
 	assertGoldenBody(t, "notifications_list", rr.Code, rr.Body.Bytes())
 }
 
+func TestGoldenOwnerNotificationsList(t *testing.T) {
+	deps := httpapi.Deps{
+		Settings:      config.Load(),
+		Notifications: mockNotificationsRepo{},
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/notifications", nil)
+	testRouter(t, deps).ServeHTTP(rr, req)
+	assertGoldenBody(t, "notifications_inbox", rr.Code, rr.Body.Bytes())
+}
+
 func TestGoldenMarketRadarEmpty(t *testing.T) {
 	deps := httpapi.Deps{
 		Settings:    config.Load(),
@@ -484,6 +495,12 @@ func (m mockTradingService) GetAccountOperations(context.Context, string) ([]tra
 type mockNotificationsRepo struct{}
 
 func (mockNotificationsRepo) ListForPortfolio(context.Context, string, bool) ([]application.NotificationRecord, error) {
+	return nil, nil
+}
+func (mockNotificationsRepo) ListForOwner(context.Context, int64) ([]application.NotificationRecord, error) {
+	return nil, nil
+}
+func (mockNotificationsRepo) GetByID(context.Context, string) (*application.NotificationRecord, error) {
 	return nil, nil
 }
 func (mockNotificationsRepo) MarkRead(context.Context, string) (*application.NotificationRecord, error) {

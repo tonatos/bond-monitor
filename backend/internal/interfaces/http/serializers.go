@@ -537,16 +537,17 @@ func NotificationToResponse(record application.NotificationRecord) NotificationR
 		dismissedAt = &s
 	}
 	return NotificationResponse{
-		ID:          record.ID,
-		Fingerprint: record.Fingerprint,
-		PortfolioID: record.PortfolioID,
-		Kind:        record.Kind,
-		Payload:     record.Payload,
-		Urgency:     record.Urgency,
-		CreatedAt:   record.CreatedAt.UTC().Format(time.RFC3339),
-		ReadAt:      readAt,
-		DismissedAt: dismissedAt,
-		IsUnread:    record.IsUnread,
+		ID:            record.ID,
+		Fingerprint:   record.Fingerprint,
+		PortfolioID:   record.PortfolioID,
+		PortfolioName: record.PortfolioName,
+		Kind:          record.Kind,
+		Payload:       record.Payload,
+		Urgency:       record.Urgency,
+		CreatedAt:     record.CreatedAt.UTC().Format(time.RFC3339),
+		ReadAt:        readAt,
+		DismissedAt:   dismissedAt,
+		IsUnread:      record.IsUnread,
 	}
 }
 

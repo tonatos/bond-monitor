@@ -1,49 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { api } from "@/api/client";
-import type { Notification } from "@/api/types";
-import { NOTIFICATION_KIND_LABELS } from "@/features/portfolio/labels";
-import { usePortfolioNotifications } from "@/features/portfolio/marketSignals";
+import {
+  notificationBackgroundClass,
+  notificationBody,
+  notificationBorderClass,
+  notificationKindLabel,
+  notificationTitle,
+} from "@/features/notifications/notificationDisplay";
+import {
+  notificationsInboxQueryKey,
+  portfolioNotificationsQueryKey,
+  usePortfolioNotifications,
+} from "@/features/portfolio/marketSignals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, formatDateTime } from "@/lib/utils";
-
-function notificationTitle(notification: Notification): string {
-  const payload = notification.payload;
-  const name = typeof payload.name === "string" ? payload.name : "Уведомление";
-  return name;
-}
-
-function notificationBody(notification: Notification): string {
-  const reason = notification.payload.reason;
-  return typeof reason === "string" ? reason : "";
-}
-
-function notificationBorderClass(notification: Notification): string {
-  if (!notification.is_unread) {
-    return "border-border/60";
-  }
-  if (notification.urgency === "critical" || notification.kind === "risk_escalation") {
-    return "border-red-400/50";
-  }
-  if (notification.urgency === "soon" || notification.kind === "put_offer_action") {
-    return "border-amber-400/40";
-  }
-  return "border-border/60";
-}
-
-function notificationBackgroundClass(notification: Notification): string {
-  if (!notification.is_unread) {
-    return "bg-card/50";
-  }
-  if (notification.urgency === "critical" || notification.kind === "risk_escalation") {
-    return "bg-red-500/5";
-  }
-  if (notification.urgency === "soon" || notification.kind === "put_offer_action") {
-    return "bg-amber-500/10";
-  }
-  return "bg-card/50";
-}
 
 interface NotificationsPanelProps {
   portfolioId: string;
@@ -57,7 +29,10 @@ export function NotificationsPanel({ portfolioId }: NotificationsPanelProps) {
   const markRead = useMutation({
     mutationFn: (notificationId: string) => api.markNotificationRead(notificationId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", portfolioId] });
+      void queryClient.invalidateQueries({
+        queryKey: portfolioNotificationsQueryKey(portfolioId),
+      });
+      void queryClient.invalidateQueries({ queryKey: notificationsInboxQueryKey });
     },
   });
 
@@ -91,8 +66,7 @@ export function NotificationsPanel({ portfolioId }: NotificationsPanelProps) {
 
       <div className="space-y-2">
         {notifications.map((notification) => {
-          const kindLabel =
-            NOTIFICATION_KIND_LABELS[notification.kind] ?? notification.kind;
+          const kindLabel = notificationKindLabel(notification);
 
           return (
             <div
@@ -125,6 +99,7 @@ export function NotificationsPanel({ portfolioId }: NotificationsPanelProps) {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="min-h-10"
                   onClick={() => markRead.mutate(notification.id)}
                   disabled={markRead.isPending}
                 >

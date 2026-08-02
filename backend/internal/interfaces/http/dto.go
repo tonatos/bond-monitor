@@ -419,20 +419,22 @@ type SellPositionPreviewResponse struct {
 }
 
 type NotificationResponse struct {
-	ID          string         `json:"id"`
-	Fingerprint string         `json:"fingerprint"`
-	PortfolioID string         `json:"portfolio_id"`
-	Kind        string         `json:"kind"`
-	Payload     map[string]any `json:"payload"`
-	Urgency     string         `json:"urgency"`
-	CreatedAt   string         `json:"created_at"`
-	ReadAt      *string        `json:"read_at"`
-	DismissedAt *string        `json:"dismissed_at"`
-	IsUnread    bool           `json:"is_unread"`
+	ID            string         `json:"id"`
+	Fingerprint   string         `json:"fingerprint"`
+	PortfolioID   string         `json:"portfolio_id"`
+	PortfolioName string         `json:"portfolio_name,omitempty"`
+	Kind          string         `json:"kind"`
+	Payload       map[string]any `json:"payload"`
+	Urgency       string         `json:"urgency"`
+	CreatedAt     string         `json:"created_at"`
+	ReadAt        *string        `json:"read_at"`
+	DismissedAt   *string        `json:"dismissed_at"`
+	IsUnread      bool           `json:"is_unread"`
 }
 
 type NotificationsListResponse struct {
 	Notifications []NotificationResponse `json:"notifications"`
+	UnreadCount   int                    `json:"unread_count,omitempty"`
 }
 
 type HealthResponse struct {

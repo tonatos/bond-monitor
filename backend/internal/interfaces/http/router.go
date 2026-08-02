@@ -106,6 +106,7 @@ func NewRouter(deps Deps, logger *slog.Logger) http.Handler {
 			r.Delete("/sandbox/{account_id}", h.DeleteSandboxAccount)
 		})
 
+		r.Get("/notifications", h.ListOwnerNotifications)
 		r.Post("/notifications/{notification_id}/read", h.MarkNotificationRead)
 		r.Post("/notifications/{notification_id}/dismiss", h.DismissNotification)
 

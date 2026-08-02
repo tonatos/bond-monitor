@@ -262,3 +262,76 @@ func TestCollectAlertsSpreadAnomaly(t *testing.T) {
 		t.Fatalf("unexpected isin %s", spreadAlerts[0].ISIN)
 	}
 }
+
+func TestSectorConcentrationRule_BatchesAllOverweightSectors(t *testing.T) {
+	today := time.Date(2026, 7, 28, 0, 0, 0, 0, time.UTC)
+	p := testutil.MakePortfolio(func(p *portfolio.Portfolio) { p.ID = "p-conc" })
+
+	mk := func(isin, sector string, price float64) bonds.BondRecord {
+		return testutil.MakeBond(func(b *bonds.BondRecord) {
+			b.ISIN, b.Name, b.FIGI = isin, isin, "FIGI-"+isin
+			b.Sector = sector
+			b.LastPrice = bonds.FloatPtr(price)
+			b.FaceValue = 1000
+			b.LotSize = 1
+			b.AccruedInterest = bonds.FloatPtr(0)
+		})
+	}
+
+	// Two sectors above 35% limit; "other" stays under.
+	universe := []bonds.BondRecord{
+		mk("RU000EN1", "energy", 100),
+		mk("RU000IT1", "it", 100),
+		mk("RU000OT1", "other", 100),
+	}
+	holdings := []notifications.HoldingSnapshot{
+		{ISIN: "RU000EN1", FIGI: "FIGI-RU000EN1", Lots: 50, Name: "EN"},
+		{ISIN: "RU000IT1", FIGI: "FIGI-RU000IT1", Lots: 40, Name: "IT"},
+		{ISIN: "RU000OT1", FIGI: "FIGI-RU000OT1", Lots: 10, Name: "OT"},
+	}
+
+	rule := notifications.SectorConcentrationRule{}
+	alerts := rule.Evaluate(notifications.AlertContext{
+		Portfolio: p,
+		Holdings:  holdings,
+		Universe:  universe,
+		Today:     today,
+	})
+	if len(alerts) != 1 {
+		t.Fatalf("expected 1 batched concentration alert, got %d", len(alerts))
+	}
+	a := alerts[0]
+	if a.Kind != notifications.AlertKindSectorConcentration {
+		t.Fatalf("unexpected kind %s", a.Kind)
+	}
+	if !strings.Contains(a.Reason, "energy") || !strings.Contains(a.Reason, "it") {
+		t.Fatalf("expected both overweight sectors in reason, got %q", a.Reason)
+	}
+	if strings.Contains(a.Reason, "other") {
+		t.Fatalf("did not expect under-limit sector in reason: %q", a.Reason)
+	}
+	fp1 := notifications.AlertFingerprint(a)
+
+	// Price reshuffle keeps same overweight set → same fingerprint.
+	universe2 := []bonds.BondRecord{
+		mk("RU000EN1", "energy", 110),
+		mk("RU000IT1", "it", 90),
+		mk("RU000OT1", "other", 100),
+	}
+	alerts2 := rule.Evaluate(notifications.AlertContext{
+		Portfolio: p,
+		Holdings:  holdings,
+		Universe:  universe2,
+		Today:     today,
+	})
+	if len(alerts2) != 1 {
+		t.Fatalf("expected 1 alert after price reshape, got %d", len(alerts2))
+	}
+	fp2 := notifications.AlertFingerprint(alerts2[0])
+	if fp1 != fp2 {
+		t.Fatalf("fingerprint changed for same overweight set: %s vs %s", fp1, fp2)
+	}
+	if a.DetailKey != alerts2[0].DetailKey {
+		t.Fatalf("detail key drifted: %q vs %q", a.DetailKey, alerts2[0].DetailKey)
+	}
+}

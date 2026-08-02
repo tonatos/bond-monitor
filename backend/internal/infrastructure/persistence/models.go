@@ -31,15 +31,16 @@ type appSettingRow struct {
 }
 
 type userNotificationRow struct {
-	ID          string         `db:"id"`
-	Fingerprint string         `db:"fingerprint"`
-	PortfolioID string         `db:"portfolio_id"`
-	Kind        string         `db:"kind"`
-	PayloadJSON string         `db:"payload_json"`
-	Urgency     string         `db:"urgency"`
-	CreatedAt   string         `db:"created_at"`
-	ReadAt      sql.NullString `db:"read_at"`
-	DismissedAt sql.NullString `db:"dismissed_at"`
+	ID            string         `db:"id"`
+	Fingerprint   string         `db:"fingerprint"`
+	PortfolioID   string         `db:"portfolio_id"`
+	PortfolioName string         `db:"portfolio_name"`
+	Kind          string         `db:"kind"`
+	PayloadJSON   string         `db:"payload_json"`
+	Urgency       string         `db:"urgency"`
+	CreatedAt     string         `db:"created_at"`
+	ReadAt        sql.NullString `db:"read_at"`
+	DismissedAt   sql.NullString `db:"dismissed_at"`
 }
 
 type deploySessionRow struct {

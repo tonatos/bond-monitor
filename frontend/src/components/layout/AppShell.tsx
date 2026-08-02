@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useTheme } from "@/components/theme-provider";
 import { SettingsSheet } from "@/features/settings/SettingsSheet";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useAuth } from "@/features/auth/AuthContext";
 import { ProStatusBadge } from "@/features/billing/ProStatusBadge";
 import { hasProAccess } from "@/features/billing/proStatus";
@@ -60,12 +62,7 @@ export function AppShell() {
       <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card/90 backdrop-blur-md md:flex">
         <div className="flex h-16 shrink-0 items-center justify-center border-b border-border px-5">
           <Link to="/" className="min-w-0" aria-label="Instrumenta">
-            <img
-              src="/brand/instrumenta-logo.png"
-              alt="Instrumenta"
-              width={140}
-              className=""
-            />
+            <BrandLogo width={140} />
           </Link>
         </div>
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4" aria-label="Основная навигация">
@@ -121,6 +118,7 @@ export function AppShell() {
             </div>
           )}
           <div className="flex gap-2">
+            <NotificationBell mode="popover" />
             {authEnabled && (
               <Button variant="outline" size="icon" onClick={logout} aria-label="Выйти">
                 <LogOut className="h-4 w-4" />
@@ -139,15 +137,10 @@ export function AppShell() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md md:hidden">
           <Link to="/" className="min-w-0" aria-label="Instrumenta">
-            <img
-              src="/brand/instrumenta-logo.png"
-              alt="Instrumenta"
-              width={141}
-              height={24}
-              className="h-6 w-auto max-w-[11rem]"
-            />
+            <BrandLogo width={141} height={24} className="h-6 w-auto max-w-[11rem]" />
           </Link>
           <div className="flex shrink-0 gap-2">
+            <NotificationBell mode="sheet" />
             {supportHref ? (
               <Button variant="outline" size="icon" asChild>
                 <a
