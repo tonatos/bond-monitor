@@ -17,7 +17,7 @@ import { STALE } from "@/features/portfolio/hooks/queryConfig";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDeploySession } from "@/features/portfolio/trading/hooks/useDeploySession";
-import { cn, formatDate, formatRub } from "@/lib/utils";
+import { cn, formatRub } from "@/lib/utils";
 import { ANALYTICAL_INFO_SHORT } from "@/features/portfolio/labels";
 import { ConfirmOrderDialog } from "@/features/portfolio/trading/ConfirmOrderDialog";
 import {
@@ -216,15 +216,28 @@ export function TradingActionQueue({
 
   const freeCash = data?.available_money_rub ?? data?.money_rub ?? portfolio.cash_balance_rub;
   const buySuggestions = groups.buys;
-  const canFreezePlan =
-    !ordersDisabled &&
-    !deploySession &&
-    buySuggestions.length > 0 &&
-    (groups.buys.some((s) => s.kind === "buy") || groups.buys.some((s) => s.kind === "reinvest"));
+  const minBuyCashRub = 5_000;
+  const canOpenDeploySession =
+    !ordersDisabled && !deploySession && freeCash >= minBuyCashRub;
   const planDoneCount =
     (deploySession?.progress.filled ?? 0) +
     (deploySession?.progress.skipped ?? 0) +
     (deploySession?.progress.stale ?? 0);
+
+  const openDeploySession = () => {
+    setCreatePlanError(null);
+    createMutation.mutate(undefined, {
+      onError: (err: Error) => {
+        if (err instanceof ApiError && err.status === 409) {
+          setCreatePlanError(
+            "Есть незавершённый план — завершите покупки, обновите или отмените текущий план.",
+          );
+          return;
+        }
+        setCreatePlanError(parseApiError(err));
+      },
+    });
+  };
 
   return (
     <>
@@ -249,59 +262,41 @@ export function TradingActionQueue({
               {adviceTime && ` · обновлено ${adviceTime}`}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => refetch()}
-            disabled={isPlanSyncing}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", isPlanSyncing && "animate-spin")} />
-            Обновить счёт
-          </Button>
-        </div>
-
-        {freeCash > 0 && buySuggestions.length > 0 && !deploySession && (
-          <div className="rounded-lg border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-900 dark:text-blue-200">
-            Свободный кэш {formatRub(freeCash)} — алгоритмический отбор кандидатов:{" "}
-            {buySuggestions.map((s) => s.name).join(", ")}
-          </div>
-        )}
-
-        {canFreezePlan && (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {canOpenDeploySession && (
               <Button
                 type="button"
                 size="sm"
                 data-testid="freeze-deploy-plan"
                 disabled={isPlanSyncing || createMutation.isPending}
-                onClick={() => {
-                  setCreatePlanError(null);
-                  createMutation.mutate(undefined, {
-                    onError: (err: Error) => {
-                      if (err instanceof ApiError && err.status === 409) {
-                        setCreatePlanError(
-                          "Есть незавершённый план — завершите покупки, обновите или отмените текущий план.",
-                        );
-                        return;
-                      }
-                      setCreatePlanError(parseApiError(err));
-                    },
-                  });
-                }}
+                onClick={openDeploySession}
               >
-                Зафиксировать план
+                Распределить кэш
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Закрепить текущие расчётные варианты докупки и реинвестиций на время исполнения
-              </p>
-            </div>
-            {createPlanError && (
-              <p className="text-xs text-amber-900 dark:text-amber-100" data-testid="deploy-session-conflict">
-                {createPlanError}
-              </p>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => refetch()}
+              disabled={isPlanSyncing}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isPlanSyncing && "animate-spin")} />
+              Обновить счёт
+            </Button>
+          </div>
+        </div>
+
+        {createPlanError && (
+          <p className="text-xs text-amber-900 dark:text-amber-100" data-testid="deploy-session-conflict">
+            {createPlanError}
+          </p>
+        )}
+
+        {freeCash > 0 && buySuggestions.length > 0 && !deploySession && (
+          <div className="rounded-lg border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-900 dark:text-blue-200">
+            Свободный кэш {formatRub(freeCash)} — алгоритмический отбор кандидатов:{" "}
+            {buySuggestions.map((s) => s.name).join(", ")}
           </div>
         )}
 
@@ -322,9 +317,6 @@ export function TradingActionQueue({
               <p className="font-medium text-violet-950 dark:text-violet-100">
                 План закупки зафиксирован · {planDoneCount}/{deploySession.progress.total}{" "}
                 выполнено
-              </p>
-              <p className="text-xs text-muted-foreground">
-                истекает {formatDate(deploySession.expires_at.slice(0, 10))}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -414,7 +406,7 @@ export function TradingActionQueue({
 
         {!deploySession && buySuggestions.length > 0 && !ordersDisabled && (
           <p className="text-xs text-muted-foreground" data-testid="freeze-plan-required-hint">
-            Докупка и реинвестиции доступны только после фиксации плана закупки.
+            Докупка и реинвестиции доступны после «Распределить кэш».
           </p>
         )}
 

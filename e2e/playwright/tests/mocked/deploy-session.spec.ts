@@ -74,14 +74,14 @@ function sessionItems(phase: SessionPhase) {
   }));
 }
 
-function buildDeploySession(phase: SessionPhase) {
+function buildDeploySession(phase: SessionPhase, expiresAt?: string) {
   const items = sessionItems(phase);
   const pending = items.filter((i) => i.status === "pending").length;
   const placed = items.filter((i) => i.status === "placed").length;
   return {
     id: "session-e2e-1",
     status: "active" as const,
-    expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+    expires_at: expiresAt ?? new Date(Date.now() + 86_400_000).toISOString(),
     cash_snapshot_rub: 80_000,
     progress: {
       total: 3,
@@ -117,7 +117,7 @@ function pendingSuggestions(phase: SessionPhase) {
 
 async function setupDeploySessionMocks(
   page: import("@playwright/test").Page,
-  options: { initialPhase?: SessionPhase } = {},
+  options: { initialPhase?: SessionPhase; expiresAt?: string } = {},
 ) {
   let phase: SessionPhase = options.initialPhase ?? "live";
 
@@ -173,19 +173,21 @@ async function setupDeploySessionMocks(
         return;
       }
       phase = "frozen";
-      await route.fulfill({ status: 201, json: buildDeploySession("frozen") });
+      await route.fulfill({ status: 201, json: buildDeploySession("frozen", options.expiresAt) });
       return;
     }
     if (method === "DELETE") {
       phase = "live";
-      await route.fulfill({ json: { ...buildDeploySession("frozen"), status: "cancelled" } });
+      await route.fulfill({
+        json: { ...buildDeploySession("frozen", options.expiresAt), status: "cancelled" },
+      });
       return;
     }
     await route.continue();
   });
 
   await page.route(`**/api/v1/portfolios/${PORTFOLIO_ID}/trading-state**`, async (route) => {
-    const deploySession = phase === "live" ? null : buildDeploySession(phase);
+    const deploySession = phase === "live" ? null : buildDeploySession(phase, options.expiresAt);
     const suggestions =
       phase === "live" ? buySuggestions : pendingSuggestions(phase);
 
@@ -256,9 +258,26 @@ test.describe("Deploy session", () => {
     await expect(page.getByTestId("freeze-plan-required-hint")).toBeVisible();
     await expect(page.getByTestId("confirm-buy-deploy-item-1")).toBeDisabled();
 
-    await page.getByTestId("freeze-deploy-plan").click();
+    const distribute = page.getByTestId("freeze-deploy-plan");
+    await expect(distribute).toHaveText("Распределить кэш");
+    await distribute.click();
     await expect(page.getByTestId("deploy-session-banner")).toBeVisible();
     await expect(page.getByTestId("confirm-buy-deploy-item-1")).toBeEnabled();
+  });
+
+  test("distribute cash button sits next to refresh account", async ({ page }) => {
+    await setupDeploySessionMocks(page);
+    await gotoPortfolio(page, PORTFOLIO_ID);
+
+    await expect(page.getByText("Очередь действий")).toBeVisible({ timeout: 15_000 });
+    const distribute = page.getByTestId("freeze-deploy-plan");
+    const refresh = page.getByRole("button", { name: "Обновить счёт" });
+    await expect(distribute).toBeVisible();
+    await expect(refresh).toBeVisible();
+    const distributeBox = await distribute.boundingBox();
+    const refreshBox = await refresh.boundingBox();
+    expect(distributeBox && refreshBox).toBeTruthy();
+    expect(Math.abs((distributeBox!.y ?? 0) - (refreshBox!.y ?? 0))).toBeLessThan(24);
   });
 
   test("freeze plan then partial buy keeps remaining ISINs and lots", async ({ page }) => {
@@ -309,11 +328,29 @@ test.describe("Deploy session", () => {
     );
   });
 
-  test("cancel plan returns freeze button", async ({ page }) => {
+  test("cancel plan returns distribute cash button", async ({ page }) => {
     const mocks = await setupDeploySessionMocks(page, { initialPhase: "frozen" });
     await gotoPortfolio(page, PORTFOLIO_ID);
 
     await expect(page.getByTestId("deploy-session-banner")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("cancel-deploy-plan").click();
+    mocks.setPhase("live");
+    await page.getByRole("button", { name: "Обновить счёт" }).click();
+    await expect(page.getByTestId("freeze-deploy-plan")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("freeze-deploy-plan")).toHaveText("Распределить кэш");
+  });
+
+  test("past expires_at session stays active and can be cancelled", async ({ page }) => {
+    const pastExpiry = new Date(Date.now() - 48 * 3_600_000).toISOString();
+    const mocks = await setupDeploySessionMocks(page, {
+      initialPhase: "frozen",
+      expiresAt: pastExpiry,
+    });
+    await gotoPortfolio(page, PORTFOLIO_ID);
+
+    await expect(page.getByTestId("deploy-session-banner")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/истекает/i)).toHaveCount(0);
+    await expect(page.getByTestId("confirm-buy-deploy-item-1")).toBeEnabled();
     await page.getByTestId("cancel-deploy-plan").click();
     mocks.setPhase("live");
     await page.getByRole("button", { name: "Обновить счёт" }).click();

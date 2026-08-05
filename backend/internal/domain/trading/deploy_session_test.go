@@ -208,15 +208,31 @@ func TestSyncSessionMarksFilledOnTerminalOrder(t *testing.T) {
 	}
 }
 
-func TestApplySessionStalenessExpiresSession(t *testing.T) {
+func TestApplySessionStalenessDoesNotExpireByTTL(t *testing.T) {
 	session := makeSessionWithBuyItems("p1")
-	now := session.ExpiresAt.Add(time.Second)
-	expired := trading.ApplySessionStaleness(session, []bonds.BondRecord{
-		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN = "RU000A1" }),
-		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN = "RU000A2" }),
+	last := 100.5
+	now := session.ExpiresAt.Add(48 * time.Hour)
+	updated := trading.ApplySessionStaleness(session, []bonds.BondRecord{
+		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN = "RU000A1"; b.LastPrice = &last }),
+		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN = "RU000A2"; p := 101.0; b.LastPrice = &p }),
 	}, testutil.MakePortfolio(), trading.DefaultDeploySessionPolicy(), &now)
-	if expired.Status != trading.DeploySessionExpired {
-		t.Fatalf("expected expired, got %s", expired.Status)
+	if updated.Status != trading.DeploySessionActive {
+		t.Fatalf("expected active after TTL, got %s", updated.Status)
+	}
+	if !trading.IsSessionActive(updated, &now) {
+		t.Fatal("expected IsSessionActive true ignoring ExpiresAt")
+	}
+}
+
+func TestIsSessionActiveIgnoresExpiresAt(t *testing.T) {
+	session := makeSessionWithBuyItems("p1")
+	past := session.ExpiresAt.Add(time.Hour)
+	if !trading.IsSessionActive(session, &past) {
+		t.Fatal("active session must stay active past ExpiresAt")
+	}
+	session.Status = trading.DeploySessionCancelled
+	if trading.IsSessionActive(session, &past) {
+		t.Fatal("cancelled session must not be active")
 	}
 }
 
@@ -235,8 +251,44 @@ func TestApplySessionStalenessMarksItemStaleOnPriceDrift(t *testing.T) {
 	}
 }
 
-func TestApplySessionStalenessMarksOverdueReinvestStale(t *testing.T) {
+func TestApplySessionStalenessKeepsReinvestPendingWithinGrace(t *testing.T) {
+	// due + ReinvestmentGapDays(2) = 2026-07-26; now is still inside grace
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	due := time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC)
+	price := 99.0
+	session := trading.DeploySession{
+		ID: "sess-reinvest-grace", PortfolioID: "p1", Status: trading.DeploySessionActive,
+		Items: []trading.DeploySessionItem{{
+			ID: "item-reinvest", Kind: trading.DeploySessionItemReinvest, ISIN: "RU000NEW1",
+			Name: "Replacement", Lots: 10, FIGI: bonds.StrPtr("FIGI-NEW"), SuggestedPricePct: price,
+			EstimatedAmountRub: 100_000, Reason: "reinvest", DueDate: &due, Status: trading.ItemStatusPending,
+		}},
+		CashSnapshotRub: 0, CreatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(-time.Hour),
+	}
+	last := 99.0
+	updated := trading.ApplySessionStaleness(session, []bonds.BondRecord{
+		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN, b.FIGI = "RU000NEW1", "FIGI-NEW"; b.LastPrice = &last }),
+	}, testutil.MakePortfolio(), trading.DefaultDeploySessionPolicy(), &now)
+	if updated.Status != trading.DeploySessionActive {
+		t.Fatalf("expected active session, got %s", updated.Status)
+	}
+	if updated.Items[0].Status != trading.ItemStatusPending {
+		t.Fatalf("expected pending within grace, got %s", updated.Items[0].Status)
+	}
+	found := false
+	for _, w := range updated.Warnings {
+		if containsFold(w, "ожидание кэша") || containsFold(w, "погашение") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected grace warning, got %v", updated.Warnings)
+	}
+}
+
+func TestApplySessionStalenessMarksOverdueReinvestStaleAfterGrace(t *testing.T) {
+	// due + 2d grace ends 2026-07-26; now is past grace
+	now := time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC)
 	due := time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC)
 	price := 99.0
 	session := trading.DeploySession{
@@ -246,14 +298,17 @@ func TestApplySessionStalenessMarksOverdueReinvestStale(t *testing.T) {
 			Name: "Replacement", Lots: 10, FIGI: bonds.StrPtr("FIGI-NEW"), SuggestedPricePct: price,
 			EstimatedAmountRub: 100_000, Reason: "reinvest", DueDate: &due, Status: trading.ItemStatusPending,
 		}},
-		CashSnapshotRub: 0, CreatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(23 * time.Hour),
+		CashSnapshotRub: 0, CreatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(-48 * time.Hour),
 	}
 	last := 99.0
 	updated := trading.ApplySessionStaleness(session, []bonds.BondRecord{
 		testutil.MakeBond(func(b *bonds.BondRecord) { b.ISIN, b.FIGI = "RU000NEW1", "FIGI-NEW"; b.LastPrice = &last }),
 	}, testutil.MakePortfolio(), trading.DefaultDeploySessionPolicy(), &now)
+	if updated.Status != trading.DeploySessionActive {
+		t.Fatalf("session must stay active after grace stale, got %s", updated.Status)
+	}
 	if updated.Items[0].Status != trading.ItemStatusStale {
-		t.Fatal("expected stale reinvest")
+		t.Fatal("expected stale reinvest after grace")
 	}
 	found := false
 	for _, w := range updated.Warnings {

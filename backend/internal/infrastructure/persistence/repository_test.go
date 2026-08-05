@@ -128,6 +128,27 @@ func TestDeploySessionRepository(t *testing.T) {
 	if err != nil || !has {
 		t.Fatalf("has active: %v %v", err, has)
 	}
+
+	// Past ExpiresAt must not hide or expire an active session.
+	expiredClock := trading.DeploySession{
+		ID: "s2", PortfolioID: "p2", Status: trading.DeploySessionActive,
+		CashSnapshotRub: 10_000, CreatedAt: now.Add(-48 * time.Hour), ExpiresAt: now.Add(-24 * time.Hour),
+		Items: []trading.DeploySessionItem{{
+			ID: "i2", Kind: trading.DeploySessionItemBuy, ISIN: "RU000A0JX0J2", Name: "ОФЗ",
+			Lots: 1, SuggestedPricePct: 100, EstimatedAmountRub: 1000, Status: trading.ItemStatusPending,
+			Urgency: trading.SuggestionUrgencyNormal,
+		}},
+	}
+	if _, err := repo.Save(ctx, expiredClock); err != nil {
+		t.Fatalf("save past-expiry session: %v", err)
+	}
+	stillActive, err := repo.GetActive(ctx, "p2")
+	if err != nil || stillActive == nil || stillActive.ID != "s2" {
+		t.Fatalf("GetActive must ignore expires_at: %v %+v", err, stillActive)
+	}
+	if stillActive.Status != trading.DeploySessionActive {
+		t.Fatalf("expected active status, got %s", stillActive.Status)
+	}
 }
 
 func TestNotificationsListForOwner(t *testing.T) {

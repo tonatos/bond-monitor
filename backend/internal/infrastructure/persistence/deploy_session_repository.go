@@ -36,26 +36,14 @@ type deploySessionItemJSON struct {
 	Urgency            string   `json:"urgency"`
 }
 
-func (r *DeploySessionRepository) expireStale(ctx context.Context, portfolioID string, now time.Time) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE deploy_sessions SET status = 'expired'
-		WHERE portfolio_id = $1 AND status = 'active' AND expires_at <= $2
-	`, portfolioID, now)
-	return err
-}
-
 func (r *DeploySessionRepository) GetActive(ctx context.Context, portfolioID string) (*trading.DeploySession, error) {
-	now := time.Now().UTC()
-	if err := r.expireStale(ctx, portfolioID, now); err != nil {
-		return nil, err
-	}
 	var row deploySessionRow
 	err := r.db.GetContext(ctx, &row, `
 		SELECT id, portfolio_id, status, cash_snapshot_rub, items_json, warnings_json, created_at, expires_at, completed_at
 		FROM deploy_sessions
-		WHERE portfolio_id = $1 AND status = 'active' AND expires_at > $2
+		WHERE portfolio_id = $1 AND status = 'active'
 		ORDER BY created_at DESC LIMIT 1
-	`, portfolioID, now)
+	`, portfolioID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

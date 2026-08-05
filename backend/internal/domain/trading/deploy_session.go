@@ -280,6 +280,7 @@ func impliedMarketPricePct(suggestedPricePct float64, accountKind *AccountKind) 
 }
 
 // ApplySessionStaleness marks items stale when prices drift or reinvest timing is wrong.
+// Sessions are not auto-expired by ExpiresAt — only complete or manual cancel closes them.
 func ApplySessionStaleness(
 	session DeploySession,
 	universe []bonds.BondRecord,
@@ -291,15 +292,12 @@ func ApplySessionStaleness(
 	if now != nil {
 		current = asUTC(*now)
 	}
-	if !asUTC(session.ExpiresAt).After(current) {
-		session.Status = DeploySessionExpired
-		return session
-	}
 	universeByISIN := make(map[string]bonds.BondRecord, len(universe))
 	for _, bond := range universe {
 		universeByISIN[bond.ISIN] = bond
 	}
 	warnings := append([]string(nil), session.Warnings...)
+	graceDays := portfolio.DefaultPlanningPolicy.ReinvestmentGapDays
 	var updated []DeploySessionItem
 	for _, item := range session.Items {
 		if item.Status == ItemStatusFilled || item.Status == ItemStatusSkipped ||
@@ -320,13 +318,20 @@ func ApplySessionStaleness(
 				continue
 			}
 			if due.Before(today) {
-				item.Status = ItemStatusStale
+				graceEnd := shared.DateOnly(shared.AddDays(due, graceDays))
+				if today.After(graceEnd) {
+					item.Status = ItemStatusStale
+					warnings = append(warnings, fmt.Sprintf(
+						"%s: погашение источника %s прошло — обновите план",
+						item.Name, shared.FormatDate(&due),
+					))
+					updated = append(updated, item)
+					continue
+				}
 				warnings = append(warnings, fmt.Sprintf(
-					"%s: погашение источника %s прошло — обновите план",
-					item.Name, shared.FormatDate(&due),
+					"%s: ожидание кэша после погашения %s (окно до %s)",
+					item.Name, shared.FormatDate(&due), shared.FormatDate(&graceEnd),
 				))
-				updated = append(updated, item)
-				continue
 			}
 		}
 		bond, ok := universeByISIN[item.ISIN]
@@ -465,9 +470,6 @@ func SessionHasPendingItems(session DeploySession) bool {
 }
 
 func IsSessionActive(session DeploySession, now *time.Time) bool {
-	current := time.Now().UTC()
-	if now != nil {
-		current = asUTC(*now)
-	}
-	return session.Status == DeploySessionActive && asUTC(session.ExpiresAt).After(current)
+	_ = now // retained for call-site compatibility; lifecycle is status-only
+	return session.Status == DeploySessionActive
 }

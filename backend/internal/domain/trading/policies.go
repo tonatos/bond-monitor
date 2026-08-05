@@ -6,11 +6,12 @@ import (
 	"github.com/tonatos/instrumenta/backend/internal/domain/shared"
 )
 
-// DeploySessionPolicy controls TTL and staleness thresholds for frozen plans.
+// DeploySessionPolicy controls staleness thresholds for frozen plans.
+// Sessions no longer auto-expire by TTL; ExpiresAt is retained for API compatibility only.
 type DeploySessionPolicy struct {
-	TTLHours            int
-	PriceDriftWarnPct   float64
-	PriceDriftStalePct  float64
+	TTLHours           int // legacy; unused for lifecycle (kept for API/compat)
+	PriceDriftWarnPct  float64
+	PriceDriftStalePct float64
 }
 
 func DefaultDeploySessionPolicy() DeploySessionPolicy {

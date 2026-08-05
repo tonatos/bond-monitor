@@ -161,7 +161,7 @@ export function SuggestionCard({
           <p className="text-xs text-muted-foreground">Ключ только для чтения — заявки недоступны</p>
         )}
         {buyBlocked && !ordersDisabled && (
-          <p className="text-xs text-muted-foreground">Сначала зафиксируйте расчётный план</p>
+          <p className="text-xs text-muted-foreground">Сначала нажмите «Распределить кэш»</p>
         )}
         {onSkip && sessionStatus === "pending" && (
           <Button
